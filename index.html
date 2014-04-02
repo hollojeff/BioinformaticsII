@@ -1,0 +1,30 @@
+<html>
+<head>
+<title>My form</title>
+</head>
+<body>
+
+<h1>Chromosome 4 analysis</h1>
+
+Test page: Variables passed are: radio buttons: name ="searchtype", values returned are geneid, product,
+genbank and chrloc.<br />
+text box name = "form"
+
+<form action='/cgi-bin/cgiwrap/jhurst03/projecttestform.pl' method='post'>
+
+<p>
+<input type="radio" name="searchtype" value="geneid"/> gene identifier
+<input type="radio" name="searchtype" value="product"/> protein product names 
+<input type="radio" name="searchtype" value="genbank"/> Genbank accession
+<input type="radio" name="searchtype" value="chrloc"/> chromosomal location
+</p>
+<p><input type="text" name="form" size="40" maxsize="40"/></p>
+
+
+<p><input type="reset" value="Reset values"/></p>
+<p><input type="submit" value="Submit"/></p>
+<p><input type="submit" name="ReturnAll" value="Show All"/></p>
+
+</form>
+</body>
+</html>
