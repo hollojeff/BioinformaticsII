@@ -7,7 +7,9 @@ package DbiHandle;
 use strict;
 use DBI;
 
-sub GetDbHandle{
+#=========================================================================================
+
+sub GetDbHandle() {
 
 	my %config;
 
@@ -22,10 +24,13 @@ sub GetDbHandle{
 	close(IN);	
 	
 	my $dbsource = "dbi:mysql:database=$config{dbname};host=$config{dbhost}";
-	my $dbh = DBI->connect($dbsource, $config{username}, $config{password});
+	my $dbh = DBI->connect($dbsource, $config{username}, $config{password}, {PrintError => 0}) 
+		or die ("Unable to connect to Chromosome 4 database: " . DBI::errstr);
 	
 	return $dbh;
 
 }
+
+#=========================================================================================
 
 1;
