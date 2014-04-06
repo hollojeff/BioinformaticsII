@@ -2,24 +2,23 @@
 #Name: Ginny Devonshire
 #Module: GenBankAnalysis
 
-use strict;
-
 package GenBankAnalysis;
 
+use strict;
+use DbiHandle;
 use GenBankData;
 use ReferenceData;
+
+#=========================================================================================
 
 #-----------------------------------------------------------------------------------------
 
 #manual test for sub-routine output
-
 #my @detail = GetDetail('ABC1');
-
 #my @gene = @{@detail[0]};
 #my %exons = %{@detail[1]};
 #my %codons = %{@detail[2]};
 #my %enzymes = %{@detail[3]};
-
 #print @gene, "\n";
 #foreach my $exon(keys(%exons)) {
 #	print $exon, ", ", $exons{$exon}, "\n";
@@ -35,46 +34,59 @@ use ReferenceData;
 
 sub GetDetail($) {
 
-	my $gene = @_[0];
-	my @gene = GenBankData::GetGeneData($gene);
-	my %exons = GenBankData::GetExonData($gene);
+	my ($gene) = @_;
+
+	my $dbh = DbiHandle::GetDbHandle();
+
+	my @gene = GenBankData::GetGeneData($gene, $dbh);
+	my %exons = GenBankData::GetExonData($gene, $dbh);
 	
 	my $codingSeq = @gene[5];
-	my %codons = CalcCodonFreq($codingSeq);
+	my %codons = CalcCodonFreq($codingSeq, $dbh);
 	
-	my %enzymes = ReferenceData::GetEnzymeData();
+	my %enzymes = ReferenceData::GetEnzymeData($dbh);
 	
 	return \@gene, \%exons, \%codons, \%enzymes;
+	
+	$dbh->disconnect();
 }
+
+#=========================================================================================
 
 #-----------------------------------------------------------------------------------------
 
 #manual test for sub-routine output
-
-#my %codons = CalcCodonFreq('GGGTTTAAAAAGCCACCCCCGACTAAAAAAAAAAAGA');
-
+#my $dbh = DbiHandle::GetDbHandle();
+#my %codons = CalcCodonFreq('AAAAAGACT', $dbh);
 #foreach my $codon(keys(%codons)){
 #	print $codon, ", ", @{$codons{$codon}}, "\n";
 #}	
 
 #-----------------------------------------------------------------------------------------
 
-sub CalcCodonFreq($) {	#need to change integer storage
-	
-	my %codons = ReferenceData::GetCodonData();
-	my %codonsCopy = %codons;
+sub CalcCodonFreq($$) {
 
-	my $codingSeq = @_[0];
+	my ($codingSeq, $dbh) = @_;
+	
+	my %codonsU = ReferenceData::GetCodonData($dbh);
+	my %codons;
+	
+	foreach my $codonU(keys(%codonsU)) {
+		my $codon = $codonU;		
+		$codon =~ s/U/T/g;
+		$codons{$codon} = $codonsU{$codonU};
+	}
 	
 	my %codonCounts;
 	my %acidCounts;
 	my $totalCount;
-	
+
 	while ($codingSeq =~ /(.{3})/g) {	#wildcard used to maintain triplet positions if seq includes non-bases
 	
 		$codonCounts{$1}++;
 		
-		my $acid = @{$codonsCopy{$1}}[0]; #copy used so keys not added to reference data if seq includes non-codons
+		my %codonsCopy = %codons;	#copy used so non-codons are not added to hash if seq includes non-codons
+		my $acid = @{$codonsCopy{$1}}[0]; 
 		$acidCounts{$acid}++;
 		
 		$totalCount++;
@@ -88,13 +100,13 @@ sub CalcCodonFreq($) {	#need to change integer storage
 		
 		if (1 == exists($codonCounts{$codon})) {
 						
-			$codonFreq = $codonCounts{$codon}*100/$totalCount;
+			$codonFreq = $codonCounts{$codon}*1000/$totalCount;
 				
 			my $acid = @{$codons{$codon}}[0];
 			$codonRatio = $codonCounts{$codon}/$acidCounts{$acid};
 
 		}
-		
+
 		push @{$codons{$codon}}, sprintf ("%.1f", $codonFreq), sprintf ("%.2f", $codonRatio);
 		
 	}	
@@ -103,14 +115,14 @@ sub CalcCodonFreq($) {	#need to change integer storage
 
 }
 
+#=========================================================================================
+
 #-----------------------------------------------------------------------------------------
 
 #manual test for sub-routine output
-
-#my @results = FindRestrictionSites('ABC1', 'ACT');
+#my @results = FindRestrictionSites('ABC2', 'ACT');
 #my %matches = %{@results[0]};
 #my $upDownStreamOnly = @results[1];
-
 #foreach my $match(keys(%matches)) {
 #	print $match, ", ", $matches{$match}, "\n";
 #}
@@ -120,14 +132,16 @@ sub CalcCodonFreq($) {	#need to change integer storage
 
 sub FindRestrictionSites($$) {
 
-	my $gene = @_[0];
-	my @gene = GenBankData::GetGeneData($gene);
+	my ($gene, $siteSeq) = @_;	
+
+	my $dbh = DbiHandle::GetDbHandle();
+
+	my @gene = GenBankData::GetGeneData($gene, $dbh);
 	my $dnaSeq = @gene[4];		
 	
-	my $siteSeq = @_[1];
 	my $siteSeqLen = length($siteSeq);
 	
-	my %exons = GenBankData::GetExonData($gene);
+	my %exons = GenBankData::GetExonData($gene, $dbh);
 	
 	my @exonStartAsc = sort({$a<=>$b} keys(%exons));
 	my $codingStart = @exonStartAsc[0];
@@ -154,6 +168,10 @@ sub FindRestrictionSites($$) {
 	
 	return \%matches, $upDownStreamOnly;
 	
+	$dbh->disconnect();
+	
 }
+
+#=========================================================================================
 
 1;
