@@ -14,18 +14,38 @@ if ($return == "Show All"){
 
 #Call script to return all results
 
-print <<__BLAH;
+
 print $cgi->header();
+print <<__EOF;
 <html>
 <head>
-   <title></title>
-</head>
-<body>
-<h1></h1>
+ <h1>Chromasome</h1>
+    <h2>Results:</h2>
+    <table>
+    <table border="1" style="width:300px">
+      <tr>
+        <th>Gene Identifier</th>
+        <th>Protein product names</th>
+        <th>Genbank Accession</th>
+	<th>Chromosomal Location</th>
+      </tr>
+__EOF
+   
+#for loop to build table
+for (my $i=1; $i < 10; $i++) { 
+print <<__EOF;
+     <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+	<td></td>
+      </tr>
+__EOF
+}
+print <<__EOF
 </body>
 </html>
-__BLAH
-}
+__EOF
 
 #Search using form and searchtype
 else {
@@ -39,14 +59,32 @@ print <<__BLAH;
    <title>Sequence Analysis Results</title>
 </head>
 <body>
-<h1>Sequence Analysis Results</h1>
-<p>
-<p><h2>Your data was:</h2>
-<br />$form</p>
-
-<p>This is a $search search</p>
-$return
+ <h1>Chromasome</h1>
+    <h2>Results:</h2>
+    <table>
+    <table border="1" style="width:300px">
+      <tr>
+        <th>Gene Identifier</th>
+        <th>Protein product names</th>
+        <th>Genbank Accession</th>
+	<th>Chromosomal Location</th>
+      </tr>
+__EOF
+   
+#for loop to build table
+for (my $i=1; $i < 10; $i++) { 
+print <<__EOF;
+     <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+	<td></td>
+      </tr>
+__EOF
+}
+print <<__EOF
 </body>
 </html>
-__BLAH
+__EOF
+
 }
