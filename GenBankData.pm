@@ -7,12 +7,12 @@ package GenBankData;
 use strict;
 use DbiHandle;
 
+#=========================================================================================
+
 #-----------------------------------------------------------------------------------------
 
 #manual test for sub-routine output
-
-#my @summary = GetSummaryData("genbank","AB123%","F");
-
+#my @summary = GetSummaryData("genbank", "");
 #foreach my $row(@summary) {
 #	print @{$row}, "\n";
 #}
@@ -21,20 +21,18 @@ use DbiHandle;
 
 sub GetSummaryData($$$) {
 
+	my ($filter, $value, $showAll) = @_;
+
 	my $sql = 
 	"SELECT dna_sequence.accession, location, gene_id, product
 	FROM dna_sequence
 	INNER JOIN gene ON dna_sequence.accession = gene.accession";	
-	
-	my $value = $_[1];		
-	my $showAll = $_[2];
 		
-	if ($showAll eq "F") {	
-	
-		my $filter = $_[0];
+	if ($showAll ne "T") {	
 	
 		if ($filter eq "" || $value eq "") {
-			return;
+			print ("Search criteria not specified.");
+			$showAll = "T";
 		}
 		
 		else {	
@@ -52,7 +50,8 @@ sub GetSummaryData($$$) {
 				$filter = "product";
 			}
 			else {
-				return;
+				print ("Search criteria not valid.");
+				$showAll = "T";
 			}
 			
 			my $sqlOperator = "=";
@@ -67,38 +66,47 @@ sub GetSummaryData($$$) {
 	}
 
 	my $dbh = DbiHandle::GetDbHandle();
-	my $sth = $dbh->prepare($sql);
 	
-	if ($showAll eq "F") {
+	my $sth = $dbh->prepare($sql)
+		or die ("Unable to construct summary query");
+	
+	if ($showAll ne "T") {
 		$sth->bind_param(1, $value);
 	}
 
-	if ($sth->execute) {
-		#my $nrows = $sth->dump_results;
-		my @summary;
-		while (my @row = $sth->fetchrow_array) {
-			push @summary, \@row; 
-		}
-		return @summary;	
+	$sth->execute
+		or die ("Unable to run summary query");
+		
+	my @summary;
+	while (my @row = $sth->fetchrow_array) {
+		push @summary, \@row; 
 	}
 	
-	else {
-		return;
-	}	
+	if (0 == $sth->rows) {
+        print ("No data found matching search criteria.");
+    }
+	
+	return @summary;	
+	
+	$sth->finish;
+	$dbh->disconnect();
 	
 }
+
+#=========================================================================================
 
 #-----------------------------------------------------------------------------------------
 
 #manual test for sub-routine output
-
-#my @gene = GetGeneData('ABC');
-
+#my $dbh = DbiHandle::GetDbHandle();
+#my @gene = GetGeneData('ABC', $dbh);
 #print @gene, "\n";
 
 #-----------------------------------------------------------------------------------------
 
-sub GetGeneData($) {
+sub GetGeneData($$) {
+
+	my ($gene, $dbh) = @_;
 
 	my $sql = 
 	"SELECT dna_sequence.accession, location, gene_id, product, dna_seq, coding_seq, aminoAcid_seq 
@@ -106,62 +114,71 @@ sub GetGeneData($) {
 	INNER JOIN gene ON dna_sequence.accession = gene.accession 
 	WHERE gene.gene_id = ?";
 
-	my $dbh = DbiHandle::GetDbHandle();
-	my $sth = $dbh->prepare($sql);
+	my $sth = $dbh->prepare($sql)
+		or die ("Unable to construct gene query");
 	
-	my $gene = @_[0];
 	$sth->bind_param(1, $gene);
 	
-	if ($sth->execute) {
-#		my $nrows = $sth->dump_results;
-		my @gene = $sth->fetchrow_array;
-		return @gene;
-	}
+	$sth->execute
+		or die ("Unable to run gene query");
 	
-	else {
-		return;
-	}
+	my @gene = $sth->fetchrow_array;
+	
+	if (0 == $sth->rows) {
+        print ("No data found for this gene.");
+    }
+
+	return @gene;
+	
+	$sth->finish;
 	
 }
+
+#=========================================================================================
 
 #-----------------------------------------------------------------------------------------
 
 #manual test for sub-routine output
-
-#my %exons = GetExonData('ABC');
-
+#my $dbh = DbiHandle::GetDbHandle();
+#my %exons = GetExonData('ABC3', $dbh);
 #foreach my $exon(keys(%exons)) {
 #	print $exon, ", ", $exons{$exon}, "\n";
-#}	
+#}
 
 #-----------------------------------------------------------------------------------------
 
-sub GetExonData($) {
+sub GetExonData($$) {
+
+	my ($gene, $dbh) = @_;
 
 	my $sql = 
 	"SELECT start_pos, end_pos
 	FROM code_sequence_positions
 	WHERE gene_id = ?";
 	
-	my $dbh = DbiHandle::GetDbHandle(); 
-	my $sth = $dbh->prepare($sql);
+	my $sth = $dbh->prepare($sql)
+		or die ("Unable to construct exon query");
 	
-	my $gene = @_[0];
 	$sth->bind_param(1, $gene);
 
-	if ($sth->execute) {
-#		my $nrows = $sth->dump_results;
-		my %exons;
-		while (my @row = $sth->fetchrow_array) {
-			$exons{@row[0]} = @row[1]; 
-		}
-		return %exons;
+	$sth->execute
+		or die ("Unable to run exon query");
+	
+	my %exons;
+	while (my @row = $sth->fetchrow_array) {
+		$exons{@row[0]} = @row[1]; 
 	}
 	
-	else {
-		return;
-	}	
+	if (0 == $sth->rows) {
+        print ("No exon data found for this gene.");
+    }
+	
+	return %exons;
+
+	$sth->finish;
 	
 }
+
+#=========================================================================================
 
 1;
