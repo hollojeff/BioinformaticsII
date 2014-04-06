@@ -2,5 +2,5 @@ Birkbeck Bioinformatics II group project
 
 Middle layer
 
-Ginny Devonshire
-
+Ginny - business logic
+Bojan - test scripts
