@@ -5,78 +5,93 @@
 package ReferenceData;
 
 use strict;
-use DbiHandle;
+
+#=========================================================================================
 
 #-----------------------------------------------------------------------------------------
 
 #manual test for sub-routine output
-
-#my %codons = GetCodonData();
-
+#use DbiHandle;
+#my $dbh = DbiHandle::GetDbHandle();
+#my %codons = GetCodonData($dbh);
 #foreach my $codon(keys(%codons)) {
 #	print $codon, ", ", @{$codons{$codon}}, "\n";
 #}	
 
 #-----------------------------------------------------------------------------------------
 
-sub GetCodonData() {
+sub GetCodonData($) {
+	
+	my ($dbh) = @_;
 	
 	my $sql = 
 	"SELECT codon, one_letter_id, codon_freq, codon_ratio
 	FROM codon";
 
-	my $dbh = DbiHandle::GetDbHandle();
-	my $sth = $dbh->prepare($sql);
+	my $sth = $dbh->prepare($sql)
+		or die ("Unable to construct codon query");
 	
-	if ($sth->execute) {
-#		my $nrows = $sth->dump_results;
-		my %codons;
-		while (my @row = $sth->fetchrow_array) {
-			push @{$codons{@row[0]}}, @row[1], @row[2], @row[3]; 
-		}
-		return %codons;
+	$sth->execute
+		or die ("Unable to run codon query");
+	
+	my %codons;
+	while (my @row = $sth->fetchrow_array) {
+		push @{$codons{@row[0]}}, @row[1], @row[2], @row[3]; 
 	}
 	
-	else {
-		return;
-	}	
+	if ($sth->rows < 64) {
+        print ("Codon reference set incomplete.");
+    }
+	
+	return %codons;
+
+	$sth->finish;
 	
 }
+
+#=========================================================================================
 
 #-----------------------------------------------------------------------------------------
 
 #manual test for sub-routine output
-
-#my %enzymes = GetEnzymeData();
-
+#use DbiHandle;
+#my $dbh = DbiHandle::GetDbHandle();
+#my %enzymes = GetEnzymeData($dbh);
 #foreach my $enzyme(keys(%enzymes)) {
 #	print $enzyme, ", ", $enzymes{$enzyme}, "\n";
 #}	
 
 #-----------------------------------------------------------------------------------------
 
-sub GetEnzymeData() {
+sub GetEnzymeData($) {
+
+	my ($dbh) = @_;
 
 	my $sql = 
 	"SELECT abbreviation, restriction_seq
 	FROM restriction_enzyme";
 	
-	my $dbh = DbiHandle::GetDbHandle();
-	my $sth = $dbh->prepare($sql);
+	my $sth = $dbh->prepare($sql)
+		or die ("Unable to construct restriction enzyme query");
 
-	if ($sth->execute) {
-#		my $nrows = $sth->dump_results;
-		my %enzymes;
-		while (my @row = $sth->fetchrow_array) {
-			$enzymes{@row[0]} = @row[1]; 
-		}
-		return %enzymes;
+	$sth->execute
+		or die ("Unable to run restriction enzyme query");
+		
+	my %enzymes;
+	while (my @row = $sth->fetchrow_array) {
+		$enzymes{@row[0]} = @row[1]; 
 	}
 	
-	else {
-		return;
-	}	
+	if (0 == $sth->rows) {
+        print ("No restriction enzymes included in reference set.");
+    }
+
+	return %enzymes;
+	
+	$sth->finish;
 	
 }
+
+#=========================================================================================
 
 1;
