@@ -8,9 +8,19 @@ use strict;
 
 #=========================================================================================
 
+#GetCodonData - notes
+
+#gets codon reference data for the genome for populating a table on the detail web page
+#route: summary web page > GetDetail > CalcCodonFreq > GetCodonData > CalcCodonFreq > GetDetail > detail web page
+
+#input: database handle
+#output: hash
+#hash keys ~ codons, hash values ~ references to arrays
+#array values ~ amino acid, genome freq, genome ratio
+
 #-----------------------------------------------------------------------------------------
 
-#manual test for sub-routine output
+#GetCodonData - manual test
 #use DbiHandle;
 #my $dbh = DbiHandle::GetDbHandle();
 #my %codons = GetCodonData($dbh);
@@ -22,7 +32,9 @@ use strict;
 
 sub GetCodonData($) {
 	
-	my ($dbh) = @_;
+	my ($dbh) = @_;	
+	$dbh
+		or die ("Unable to process request for codon reference data");
 	
 	my $sql = 
 	"SELECT codon, one_letter_id, codon_freq, codon_ratio
@@ -40,7 +52,7 @@ sub GetCodonData($) {
 	}
 	
 	if ($sth->rows < 64) {
-        print ("Codon reference set incomplete.");
+        print ("Codon reference data incomplete.\n");
     }
 	
 	return %codons;
@@ -51,9 +63,18 @@ sub GetCodonData($) {
 
 #=========================================================================================
 
+#GetEnzymeData - notes
+
+#gets restriction enzyme reference data for populating a drop down box or radio buttons on the detail web page
+#route: summary web page > GetDetail > GetEnzymeData > GetDetail > detail web page
+
+#input: database handle
+#output: hash
+#hash keys ~ enzyme names, hash values ~ restriction sequences
+
 #-----------------------------------------------------------------------------------------
 
-#manual test for sub-routine output
+#GetEnzymeData - manual test
 #use DbiHandle;
 #my $dbh = DbiHandle::GetDbHandle();
 #my %enzymes = GetEnzymeData($dbh);
@@ -66,6 +87,8 @@ sub GetCodonData($) {
 sub GetEnzymeData($) {
 
 	my ($dbh) = @_;
+	$dbh
+		or die ("Unable to process request for restriction enzyme data");
 
 	my $sql = 
 	"SELECT abbreviation, restriction_seq
@@ -83,9 +106,9 @@ sub GetEnzymeData($) {
 	}
 	
 	if (0 == $sth->rows) {
-        print ("No restriction enzymes included in reference set.");
-    }
-
+        print ("No restriction enzymes included in reference data.\n");
+	}
+	
 	return %enzymes;
 	
 	$sth->finish;

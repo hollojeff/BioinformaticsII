@@ -9,12 +9,24 @@ use DBI;
 
 #=========================================================================================
 
+#GetDbHandle - notes
+
+#reads details from a configuration file and provides a database handle for other subroutines
+#called from: GetSummaryData, GetDetailData, FindRestrictionSites
+#database handle passed to other subroutines from these three
+
+#input: none
+#output: database handle
+
+#-----------------------------------------------------------------------------------------
+
 sub GetDbHandle() {
 
-	my %config;
+	my $file = "DbiConfig.cnf";
+	open(IN, $file)
+		or die ("Unable to open configuration file for Chromosome 4 database: " . $file);
 
-	open(IN, "DbiConfig.cnf");
-
+	my %config;	
 	while (my $line = <IN>) {
 		if ($line =~ /(\S+)=(\S+)/) {
 			$config{$1} = $2;

@@ -9,10 +9,20 @@ use DbiHandle;
 
 #=========================================================================================
 
+#GetSummaryData - notes
+
+#gets gene data for genes that match search criteria for displaying on the summary web page
+#route: search web page > GetSummaryData > summary web page
+
+#inputs: filter field, field value, show all true/false flag
+#output: array1
+#array1 values ~ references to arrays2
+#array2 values ~ accession no, location, gene id, product
+
 #-----------------------------------------------------------------------------------------
 
-#manual test for sub-routine output
-#my @summary = GetSummaryData("genbank", "");
+#GetSummaryData - manual test
+#my @summary = GetSummaryData('genbank', 'AB1%', "F");
 #foreach my $row(@summary) {
 #	print @{$row}, "\n";
 #}
@@ -30,12 +40,7 @@ sub GetSummaryData($$$) {
 		
 	if ($showAll ne "T") {	
 	
-		if ($filter eq "" || $value eq "") {
-			print ("Search criteria not specified.");
-			$showAll = "T";
-		}
-		
-		else {	
+		if ($filter && $value) {	
 		
 			if ($filter eq "genbank") {
 				$filter = "dna_sequence.accession";
@@ -54,13 +59,22 @@ sub GetSummaryData($$$) {
 				$showAll = "T";
 			}
 			
-			my $sqlOperator = "=";
-			if ($value =~ /^%.*/ || $value =~ /.*%$/) {
-				$sqlOperator = "LIKE";
+			if ($showAll ne "T") {
+			
+				my $sqlOperator = "=";
+				if ($value =~ /^%.*/ || $value =~ /.*%$/) {
+					$sqlOperator = "LIKE";
+				}
+			
+				$sql = $sql." WHERE ".$filter." ".$sqlOperator." ?";
+			
 			}
 			
-			$sql = $sql." WHERE ".$filter." ".$sqlOperator." ?";
-			
+		}
+		
+		else {
+			print ("Search criteria not fully specified.");
+			$showAll = "T";
 		}
 		
 	}
@@ -83,7 +97,7 @@ sub GetSummaryData($$$) {
 	}
 	
 	if (0 == $sth->rows) {
-        print ("No data found matching search criteria.");
+        print ("No data found for these search criteria.\n");
     }
 	
 	return @summary;	
@@ -95,11 +109,24 @@ sub GetSummaryData($$$) {
 
 #=========================================================================================
 
+#GetGeneData - notes
+
+#gets gene data for a specific gene for displaying on the detail web page
+#route: summary web page > GetDetail > GetGeneData > GetDetail > detail web page
+
+#also gets gene data for a specific gene for finding restriction sites
+#route: detail web page > FindRestrictionSites > GetGeneData > FindRestrictionSites > restriction web page
+
+#inputs: gene id, database handle
+#output: array
+#array values ~ accession no, location, gene id,  product,
+#DNA sequence, coding sequence, product sequence
+
 #-----------------------------------------------------------------------------------------
 
-#manual test for sub-routine output
+#GetGeneData - manual test
 #my $dbh = DbiHandle::GetDbHandle();
-#my @gene = GetGeneData('ABC', $dbh);
+#my @gene = GetGeneData('', $dbh);
 #print @gene, "\n";
 
 #-----------------------------------------------------------------------------------------
@@ -107,6 +134,8 @@ sub GetSummaryData($$$) {
 sub GetGeneData($$) {
 
 	my ($gene, $dbh) = @_;
+	$gene && $dbh
+		or die ("Unable to process request for gene data");
 
 	my $sql = 
 	"SELECT dna_sequence.accession, location, gene_id, product, dna_seq, coding_seq, aminoAcid_seq 
@@ -125,7 +154,7 @@ sub GetGeneData($$) {
 	my @gene = $sth->fetchrow_array;
 	
 	if (0 == $sth->rows) {
-        print ("No data found for this gene.");
+        print ("No data found for this gene.\n");
     }
 
 	return @gene;
@@ -136,11 +165,23 @@ sub GetGeneData($$) {
 
 #=========================================================================================
 
+#GetExonData - notes
+
+#gets exon data for a specific gene for highlighting against the DNA sequence on the detail web page
+#route: summary web page > GetDetail > GetExonData > GetDetail > detail web page
+
+#also gets exon data for a specific gene for comparing with restriction site data
+#route: detail web page > FindRestrictionSites > GetExonData > FindRestrictionSites > restriction web page
+
+#inputs: gene id, database handle
+#output: hash
+#hash keys ~ exon start positions, hash values ~ exon end positions
+
 #-----------------------------------------------------------------------------------------
 
-#manual test for sub-routine output
+#GetExonData - manual test
 #my $dbh = DbiHandle::GetDbHandle();
-#my %exons = GetExonData('ABC3', $dbh);
+#my %exons = GetExonData('ABC1', $dbh);
 #foreach my $exon(keys(%exons)) {
 #	print $exon, ", ", $exons{$exon}, "\n";
 #}
@@ -150,7 +191,9 @@ sub GetGeneData($$) {
 sub GetExonData($$) {
 
 	my ($gene, $dbh) = @_;
-
+	$gene && $dbh
+		or die ("Unable to process request for exon data");
+		
 	my $sql = 
 	"SELECT start_pos, end_pos
 	FROM code_sequence_positions
@@ -170,7 +213,7 @@ sub GetExonData($$) {
 	}
 	
 	if (0 == $sth->rows) {
-        print ("No exon data found for this gene.");
+        print ("No exon data found for this gene.\n");
     }
 	
 	return %exons;
