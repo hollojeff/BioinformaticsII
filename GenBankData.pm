@@ -14,7 +14,7 @@ use DbiHandle;
 #gets gene data for genes that match search criteria for displaying on the summary web page
 #route: search web page > GetSummaryData > summary web page
 
-#inputs: filter field, field value, show all true/false flag
+#inputs: filter field, filter value, show all true/false flag
 #output: array1
 #array1 values ~ references to arrays2
 #array2 values ~ accession no, location, gene id, product
@@ -34,22 +34,21 @@ sub GetSummaryData($$$) {
 	my ($filter, $value, $showAll) = @_;
 
 	my $sql = 
-	"SELECT dna_sequence.accession, location, gene_id, product
-	FROM dna_sequence
-	INNER JOIN gene ON dna_sequence.accession = gene.accession";	
+	"SELECT accession, location, gene_id, product
+	FROM dna_sequence";	
 		
 	if ($showAll ne "T") {	
 	
 		if ($filter && $value) {	
 		
 			if ($filter eq "genbank") {
-				$filter = "dna_sequence.accession";
+				$filter = "accession";
 			}
 			elsif ($filter eq "chrloc") {
 				$filter = "location";
 			}
 			elsif ($filter eq "geneid") {
-				$filter = "gene.gene_id";
+				$filter = "gene_id";
 			}
 			elsif ($filter eq "product") {
 				$filter = "product";
@@ -117,36 +116,34 @@ sub GetSummaryData($$$) {
 #also gets gene data for a specific gene for finding restriction sites
 #route: detail web page > FindRestrictionSites > GetGeneData > FindRestrictionSites > restriction web page
 
-#inputs: gene id, database handle
+#inputs: accession number, database handle
 #output: array
-#array values ~ accession no, location, gene id,  product,
-#DNA sequence, coding sequence, product sequence
+#array values ~ accession no, location, gene id,  product, DNA sequence, coding sequence, product sequence
 
 #-----------------------------------------------------------------------------------------
 
 #GetGeneData - manual test
 #my $dbh = DbiHandle::GetDbHandle();
-#my @gene = GetGeneData('', $dbh);
+#my @gene = GetGeneData('AB123456', $dbh);
 #print @gene, "\n";
 
 #-----------------------------------------------------------------------------------------
 
 sub GetGeneData($$) {
 
-	my ($gene, $dbh) = @_;
-	$gene && $dbh
+	my ($accessionNo, $dbh) = @_;
+	$accessionNo && $dbh
 		or die ("Unable to process request for gene data");
 
 	my $sql = 
-	"SELECT dna_sequence.accession, location, gene_id, product, dna_seq, coding_seq, aminoAcid_seq 
+	"SELECT accession, location, gene_id, product, dna_seq, coding_seq, aminoAcid_seq 
 	FROM dna_sequence 
-	INNER JOIN gene ON dna_sequence.accession = gene.accession 
-	WHERE gene.gene_id = ?";
+	WHERE accession = ?";
 
 	my $sth = $dbh->prepare($sql)
 		or die ("Unable to construct gene query");
 	
-	$sth->bind_param(1, $gene);
+	$sth->bind_param(1, $accessionNo);
 	
 	$sth->execute
 		or die ("Unable to run gene query");
@@ -173,7 +170,7 @@ sub GetGeneData($$) {
 #also gets exon data for a specific gene for comparing with restriction site data
 #route: detail web page > FindRestrictionSites > GetExonData > FindRestrictionSites > restriction web page
 
-#inputs: gene id, database handle
+#inputs: accession number, database handle
 #output: hash
 #hash keys ~ exon start positions, hash values ~ exon end positions
 
@@ -181,7 +178,7 @@ sub GetGeneData($$) {
 
 #GetExonData - manual test
 #my $dbh = DbiHandle::GetDbHandle();
-#my %exons = GetExonData('ABC1', $dbh);
+#my %exons = GetExonData('CD123456', $dbh);
 #foreach my $exon(keys(%exons)) {
 #	print $exon, ", ", $exons{$exon}, "\n";
 #}
@@ -190,19 +187,19 @@ sub GetGeneData($$) {
 
 sub GetExonData($$) {
 
-	my ($gene, $dbh) = @_;
-	$gene && $dbh
+	my ($accessionNo, $dbh) = @_;
+	$accessionNo && $dbh
 		or die ("Unable to process request for exon data");
 		
 	my $sql = 
 	"SELECT start_pos, end_pos
 	FROM code_sequence_positions
-	WHERE gene_id = ?";
+	WHERE accession = ?";
 	
 	my $sth = $dbh->prepare($sql)
 		or die ("Unable to construct exon query");
 	
-	$sth->bind_param(1, $gene);
+	$sth->bind_param(1, $accessionNo);
 
 	$sth->execute
 		or die ("Unable to run exon query");
