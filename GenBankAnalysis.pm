@@ -19,18 +19,18 @@ use ReferenceData;
 #					> CalcCodonFreq > GetCodonData	>
 #					> GetEnzymeData			>
 
-#input: gene id
+#input: accession number
 #outputs: references to gene detail array, exon hash, codon hash, enzyme hash
 #gene detail array values ~ accession no, location, gene id,  product, DNA sequence, coding sequence, product sequence
 #exon hash keys ~ exon start positions, exon hash values ~ exon end positions
 #codon hash keys ~ codons, codon hash values ~ references to codon arrays
-#codon array values ~ amino acid, genome freq, genome ratio, gene freq, gene ratio
+#codon array values ~ amino acid, genome freqquency, genome ratio, gene frequency, gene ratio
 #enzyme hash keys ~ enzyme names, enzyme hash values ~ restriction sequences
 
 #-----------------------------------------------------------------------------------------
 
 #GetDetail - manual test
-#my @detail = GetDetail('ABC1');
+#my @detail = GetDetail('CD123456');
 #my @gene = @{@detail[0]};
 #my %exons = %{@detail[1]};
 #my %codons = %{@detail[2]};
@@ -50,14 +50,14 @@ use ReferenceData;
 
 sub GetDetail($) {
 
-	my ($gene) = @_;
-	$gene
+	my ($accessionNo) = @_;
+	$accessionNo
 		or die ("Unable to process request for detailed gene data");
 
 	my $dbh = DbiHandle::GetDbHandle();
 
-	my @gene = GenBankData::GetGeneData($gene, $dbh);
-	my %exons = GenBankData::GetExonData($gene, $dbh);
+	my @gene = GenBankData::GetGeneData($accessionNo, $dbh);
+	my %exons = GenBankData::GetExonData($accessionNo, $dbh);
 	
 	my $codingSeq = @gene[5];
 	my %codons = CalcCodonFreq($codingSeq, $dbh);
@@ -79,13 +79,13 @@ sub GetDetail($) {
 #input: coding sequence, database handle
 #output: hash
 #hash keys ~ codons, hash values ~ references to arrays
-#array values ~ amino acid, genome freq, genome ratio, gene freq, gene ratio
+#array values ~ amino acid, genome frequency, genome ratio, gene frequency, gene ratio
 
 #-----------------------------------------------------------------------------------------
 
 #CalcCodonFreq - manual test
 #my $dbh = DbiHandle::GetDbHandle();
-#my %codons = CalcCodonFreq('', $dbh);
+#my %codons = CalcCodonFreq('AAGAAG', $dbh);
 #foreach my $codon(keys(%codons)){
 #	print $codon, ", ", @{$codons{$codon}}, "\n";
 #}	
@@ -152,9 +152,9 @@ sub CalcCodonFreq($$) {
 #finds restriction sites for a specific gene and a specific enzyme for highlighting on the restriction page
 #flags whether restriction sites appear just in up/downstream regions or not
 #routes: detail web page > FindRestrictionSites > GetGeneData > FindRestrictionSites > restriction web page
-#						> GetExonData >
+#												> GetExonData >
 
-#inputs: gene id, restriction sequence
+#inputs: accession number, restriction sequence
 #outputs: hash reference, up/downstream only flag
 #hash keys ~ restriction site start positions, hash values ~ restriction site end posiions
 #first position = 1
@@ -164,7 +164,7 @@ sub CalcCodonFreq($$) {
 #-----------------------------------------------------------------------------------------
 
 #FindRestrictionSites - manual test
-#my @results = FindRestrictionSites('ABC1','GAT');
+#my @results = FindRestrictionSites('CD123456','GAT');
 #my %matches = %{@results[0]};
 #my $upDownStreamOnly = @results[1];
 #foreach my $match(keys(%matches)) {
@@ -176,12 +176,12 @@ sub CalcCodonFreq($$) {
 
 sub FindRestrictionSites($$) {
 
-	my ($gene, $siteSeq) = @_;	
-	$gene && $siteSeq
+	my ($accessionNo, $siteSeq) = @_;	
+	$accessionNo && $siteSeq
 		or die ("Unable to process request for restriction site data");
 
 	my $dbh = DbiHandle::GetDbHandle();
-	my @gene = GenBankData::GetGeneData($gene, $dbh);
+	my @gene = GenBankData::GetGeneData($accessionNo, $dbh);
 	
 	my %matches;	
 	#initialise restriction site flag, set to no restriction sites
@@ -201,7 +201,7 @@ sub FindRestrictionSites($$) {
 			
 			if (%matches) {
 			
-				my %exons = GenBankData::GetExonData($gene, $dbh);
+				my %exons = GenBankData::GetExonData($accessionNo, $dbh);
 						
 				if (%exons) {
 				
