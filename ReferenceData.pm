@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 #Name: Ginny Devonshire
-#Module: ReferenceData
+#Middle layer module: ReferenceData
+#Includes: sub-routines to get reference data from the database
 
 package ReferenceData;
 
@@ -10,13 +11,14 @@ use strict;
 
 #GetCodonData - notes
 
-#gets codon reference data for the genome for populating a table on the detail web page
-#route: summary web page > GetDetail > CalcCodonFreq > GetCodonData > CalcCodonFreq > GetDetail > detail web page
+#gets codon usage reference data for the genome
+#output used to populate a table on the detail web page
+#summary page >> GetDetail >> CalcCodonFreq >> GetCodonData >> CalcCodonFreq >> GetDetail >> detail page
 
 #input: database handle
 #output: hash
 #hash keys ~ codons, hash values ~ references to arrays
-#array values ~ amino acid, genome freq, genome ratio
+#array values ~ amino acid, genome frequency, genome ratio
 
 #-----------------------------------------------------------------------------------------
 
@@ -36,6 +38,7 @@ sub GetCodonData($) {
 	$dbh
 		or die ("Unable to process request for codon reference data");
 	
+	#create and run a query to return the codon reference records including amino acid and genome stats
 	my $sql = 
 	"SELECT codon, one_letter_id, codon_freq, codon_ratio
 	FROM codon";
@@ -45,32 +48,38 @@ sub GetCodonData($) {
 	
 	$sth->execute
 		or die ("Unable to run codon query");
-	
+
+	#append each record to the return hash
 	my %codons;
 	while (my @row = $sth->fetchrow_array) {
 		push @{$codons{@row[0]}}, @row[1], @row[2], @row[3]; 
 	}
 	
-	if ($sth->rows < 64) {
+	if ($sth->rows > 0 && $sth->rows < 64) {
         print ("Codon reference data incomplete.\n");
     }
 	
+	if (0 == $sth->rows) {
+        print ("No codons included in reference data.\n");
+    }
+
+	$sth->finish;	
+	
 	return %codons;
 
-	$sth->finish;
-	
 }
 
 #=========================================================================================
 
 #GetEnzymeData - notes
 
-#gets restriction enzyme reference data for populating a drop down box or radio buttons on the detail web page
-#route: summary web page > GetDetail > GetEnzymeData > GetDetail > detail web page
+#gets restriction enzyme reference data 
+#output used to populate a drop down box or radio buttons on the detail web page
+#summary page >> GetDetail >> GetEnzymeData >> GetDetail >> detail page
 
 #input: database handle
 #output: hash
-#hash keys ~ enzyme names, hash values ~ restriction sequences
+#hash keys ~ enzyme abbreviations, hash values ~ restriction sequences
 
 #-----------------------------------------------------------------------------------------
 
@@ -90,6 +99,7 @@ sub GetEnzymeData($) {
 	$dbh
 		or die ("Unable to process request for restriction enzyme data");
 
+	#create and run a query to return the enzyme reference records
 	my $sql = 
 	"SELECT abbreviation, restriction_seq
 	FROM restriction_enzyme";
@@ -99,7 +109,8 @@ sub GetEnzymeData($) {
 
 	$sth->execute
 		or die ("Unable to run restriction enzyme query");
-		
+
+	#append each record to the return hash		
 	my %enzymes;
 	while (my @row = $sth->fetchrow_array) {
 		$enzymes{@row[0]} = @row[1]; 
@@ -109,9 +120,9 @@ sub GetEnzymeData($) {
         print ("No restriction enzymes included in reference data.\n");
 	}
 	
-	return %enzymes;
-	
 	$sth->finish;
+	
+	return %enzymes;
 	
 }
 
