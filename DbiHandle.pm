@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #Name: Ginny Devonshire
-#Module: DbiHandle
+#Middle layer module: DbiHandle
 
 package DbiHandle;
 
@@ -12,11 +12,12 @@ use DBI;
 #GetDbHandle - notes
 
 #reads details from a configuration file and provides a database handle for other subroutines
-#called from: GetSummaryData, GetDetailData, FindRestrictionSites
-#database handle passed to other subroutines from these three
 
 #input: none
 #output: database handle
+
+#called from: GetSummaryData, GetDetailData, FindRestrictionSites
+#database handle passed to other subroutines from these three
 
 #-----------------------------------------------------------------------------------------
 
