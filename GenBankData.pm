@@ -24,16 +24,17 @@ use DbiHandle;
 #-----------------------------------------------------------------------------------------
 
 #GetSummaryData - manual test
-#my @summary = GetSummaryData('genbank', 'EF1%', "F");
-#foreach my $row(@summary) {
-#	print @{$row}, "\n";
-#}
+my @summary = GetSummaryData('prod', 'glycos%', "F");
+foreach my $row(@summary) {
+	print @{$row}, "\n";
+}
 
 #-----------------------------------------------------------------------------------------
 
 sub GetSummaryData($$$) {
 
 	my ($filter, $value, $showAll) = @_;
+	my $sqlFilter;
 
 	#create a query to return all the gene records	
 	my $sql = 
@@ -44,27 +45,18 @@ sub GetSummaryData($$$) {
 	if ($showAll ne "T") {	
 	
 		#if search criteria are specified
-		if ($filter && $value) {	
+		if ($filter && $value) {
 		
 			#translate the filter field from the web name to the sql name 
-			if ($filter eq "genbank") {
-				$filter = "accession";
-			}
-			elsif ($filter eq "chrloc") {
-				$filter = "location";
-			}
-			elsif ($filter eq "geneid") {
-				$filter = "gene_id";
-			}
-			elsif ($filter eq "product") {
-				$filter = "product";
-			}
+			my %translation = (genbank => "accession", chrloc => "location", geneid => "gene_id", product => "product");
+			my $sqlFilter = $translation{$filter};
+
 			#if the filter field isn't valid, ignore the filter and switch the show all flag to true
-			else {
+			unless ($sqlFilter) {
 				print ("Search criterion not valid, filter: " . $filter . "\n");
 				$showAll = "T";
 			}
-			
+
 			if ($showAll ne "T") {
 			
 				#construct the sql where clause and append to the sql query
@@ -80,7 +72,7 @@ sub GetSummaryData($$$) {
 		
 		#if search criteria aren't specified, switch the show all flag to true
 		else {
-			print ("Search criteria not fully specified, filter: " . $filter . ", value: " . $value . "\n");
+			print ("Search criteria not fully specified, filter: " . $filter . ", and value: " . $value . "\n");
 			$showAll = "T";
 		}
 		
@@ -100,19 +92,17 @@ sub GetSummaryData($$$) {
 		or die ("Unable to run summary query");
 	
 	#create an array for each record, append a reference to each array to the return array
-	my @summary;
-	while (my @row = $sth->fetchrow_array) {
-		push @summary, \@row; 
-	}
+	my $summaryRef = $sth->fetchall_arrayref;
 	
 	if (0 == $sth->rows) {
-        print ("No gene records found for these search criteria, filter: " . $filter . ", value: " . $value . "\n");
-    }
+        	print ("No gene records found for these search criteria, filter: " . $filter . ", and value: " . $value . "\n");
+		#subroutine returns empty array
+    	}
 	
 	$sth->finish;
 	$dbh->disconnect();
 	
-	return @summary;	
+	return @{$summaryRef};
 
 }
 
@@ -143,8 +133,10 @@ sub GetSummaryData($$$) {
 sub GetGeneData($$) {
 
 	my ($accessionNo, $dbh) = @_;
-	$accessionNo && $dbh
-		or die ("Unable to process request for gene data");
+	$dbh
+		or die ("Unable to process request for gene data: unable to access database");
+	$accessionNo
+		or die ("Unable to process request for gene data: accession number not specified");
 
 	#create and run a query to return the gene record	
 	my $sql = 
@@ -164,24 +156,32 @@ sub GetGeneData($$) {
 	my @gene = $sth->fetchrow_array;
 	
 	if (0 == $sth->rows) {
-        print ("No gene records found for this accession number: " . $accessionNo . "\n");
+        	print ("No gene records found for this accession number: " . $accessionNo . "\n");
+		#subroutine returns empty array
+	}
+	
+	else {
+	
+		#if the dna sequence length isn't available in the database, calculate 
+		if ("" == @gene[7] || 0 == @gene[7]) {
+			@gene[7] = length(@gene[4]);
+		}
+
+		#if the gene is on the complementary strand, convert the dna and coding sequences 
+		if (@gene[8] eq "Y") {
+			@gene[4] = ReverseComplementSequence(@gene[4]);
+			if (@gene[5]) {
+				@gene[5] = ReverseComplementSequence(@gene[5]);
+			}
+		}
+		#if the gene is not on the complementary strand, set the complement flag to no, if not done in database
+		elsif (@gene[8] ne "N") {
+			@gene[8] = "N"
+		}
+	
     }
 
 	$sth->finish;
-	
-	#if the dna sequence length isn't available in the database, calculate 
-	if (@gene[7] == "" || @gene[7] == 0) {
-		@gene[7] = length(@gene[4])
-	}
-
-	#if the gene is on the complementary strand, convert the dna and coding sequences 
-	if (@gene[8] eq "Y") {
-		@gene[4] = ReverseComplementSequence(@gene[4]);
-		@gene[5] = ReverseComplementSequence(@gene[5]);
-	}
-	elsif (@gene[8] ne "N") {
-		@gene[8] = "N"
-	}
 
 	return @gene;
 
@@ -206,7 +206,7 @@ sub GetGeneData($$) {
 
 #GetExonData - manual test
 #my $dbh = DbiHandle::GetDbHandle();
-#my %exons = GetExonData('CD123456', 'N', '10', $dbh);
+#my %exons = GetExonData('CD123456', 'N', '3000', $dbh);
 #foreach my $exon(keys(%exons)) {
 #	print $exon, ", ", $exons{$exon}, "\n";
 #}
@@ -215,9 +215,11 @@ sub GetGeneData($$) {
 
 sub GetExonData($$$$) {
 
-	my ($accessionNo, $complementFlag, $seqLength, $dbh, ) = @_;
-	$accessionNo && $complementFlag && $seqLength && $dbh
-		or die ("Unable to process request for exon data");
+	my ($accessionNo, $complementFlag, $seqLength, $dbh) = @_;
+	$dbh
+		or die ("Unable to process request for exon data: unable to access database");
+	$accessionNo && $complementFlag && $seqLength
+		or die ("Unable to process request for exon data for this accession number: " . $accessionNo . ", complement flag: " . $complementFlag . ", and sequence length: " . $seqLength);
 	
 	#create and run a query to return the exon records
 	my $sql = 
@@ -235,7 +237,7 @@ sub GetExonData($$$$) {
 
 	my %exons;
 	
-	#if the gene is on the complementary strand  
+	#if the gene is on the complementary strand
 	if ($complementFlag eq "Y") {
 		
 		#convert the start and end positions and append each record to the return hash
@@ -255,8 +257,9 @@ sub GetExonData($$$$) {
 	}
 	
 	if (0 == $sth->rows) {
-        print ("No exon records found for this accession number: " . $accessionNo . "\n");
-    }
+        	print ("No exon records found for this accession number: " . $accessionNo . "\n");
+		#subroutine returns empty hash
+    	}
 
 	$sth->finish;
 
@@ -281,7 +284,7 @@ sub GetExonData($$$$) {
 #-----------------------------------------------------------------------------------------
 
 #ReverseComplementSequence - manual test
-#my $seq = "AAAAAAGGGGGGCCCCCCTTTTTTAAAAAATTTTT";
+#my $seq = "";
 #print scalar(reverse($seq)), "\n";
 #print ReverseComplementSequence($seq);
 
@@ -291,7 +294,7 @@ sub ReverseComplementSequence($) {
 
 	my ($sequence) = @_;	
 	$sequence
-		or die ("Unable to process request to complement and reverse sequence");
+		or die ("Unable to process request to complement and reverse sequence: sequence not specified");
 	
 	my %baseComplements = (A => "T", C => "G", G => "C", T => "A");
 

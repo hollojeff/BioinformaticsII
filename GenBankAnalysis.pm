@@ -29,7 +29,7 @@ use ReferenceData;
 #-----------------------------------------------------------------------------------------
 
 #GetDetail - manual test
-#my @detail = GetDetail('CD123456');
+#my @detail = GetDetail('AB123456');
 #my @gene = @{@detail[0]};
 #my %exons = %{@detail[1]};
 #my %codons = %{@detail[2]};
@@ -51,31 +51,63 @@ sub GetDetail($) {
 
 	my ($accessionNo) = @_;
 	$accessionNo
-		or die ("Unable to process request for detailed gene data");
+		or die ("Unable to process request for detailed gene data: accession number not specified");
 
 	my $dbh = DbiHandle::GetDbHandle();
 
 	my @gene = GenBankData::GetGeneData($accessionNo, $dbh);
 	
-	my $complementFlag = @gene[8];
-	my $seqLength = @gene[7];
-		
-	my %exons = GenBankData::GetExonData($accessionNo, $complementFlag, $seqLength, $dbh);
-	
+	my %exons;
 	my %codons;
-	my $codingSeq = @gene[5];
-	if ($codingSeq) {
-		%codons = CalcCodonFreq($codingSeq, $dbh);
-	}
-	else {
-		print ("No coding sequence found for this accession number: " . $accessionNo . "\n");
-	}
+	my %enzymes;
 	
-	my %enzymes = ReferenceData::GetEnzymeData($dbh);
+	if (@gene) {
+	
+		unless (@gene[1]) {
+			print ("No location found for this accession number: " . $accessionNo . "\n");
+		}
+		
+		unless (@gene[2]) {
+			print ("No gene ID found for this accession number: " . $accessionNo . "\n");
+		}
+	
+		my $complementFlag = @gene[8];
+		my $seqLength = @gene[7];
+			
+		%exons = GenBankData::GetExonData($accessionNo, $complementFlag, $seqLength, $dbh);
+		#if no exon records are found, GetExonData prints a message
+		#subroutine returns empty exon hash
+		
+		my $codingSeq = @gene[5];
+		if ($codingSeq) {
+			%codons = CalcCodonFreq($codingSeq, $dbh);
+			#if no reference codon records are found, GetCodonData prints a message
+			#subroutine returns empty codon hash
+		}
+		else {
+			print ("No coding sequence found for this accession number: " . $accessionNo . "\n");
+		}
+		
+		unless (@gene[6]) {
+			print ("No amino acid sequence found for this accession number: " . $accessionNo . "\n");
+		}
+		
+		unless (@gene[3]) {
+			print ("No product found for this accession number: " . $accessionNo . "\n");
+		}
+		
+		%enzymes = ReferenceData::GetEnzymeData($dbh);
+		#if no enzyme records are found, GetEnzymeDate prints a message
+		#subroutine returns empty enzyme hash
+	
+	}
+	#if no gene records are found, GetGeneData prints a message
+	#subroutine returns empty gene array
+	
+	$dbh->disconnect();
 	
 	return \@gene, \%exons, \%codons, \%enzymes;
 	
-	$dbh->disconnect();
 }
 
 #=========================================================================================
@@ -105,8 +137,10 @@ sub GetDetail($) {
 sub CalcCodonFreq($$) {
 
 	my ($codingSeq, $dbh) = @_;
-	$codingSeq && $dbh
-		or die ("Unable to process request to calculate codon frequencies");
+	$dbh
+		or die ("Unable to process request to calculate codon frequencies: unable to access database");
+	$codingSeq
+		or die ("Unable to process request to calculate codon frequencies: coding sequence not specified");
 	
 	#get the codon reference data (uracil base used)
 	my %codonsU = ReferenceData::GetCodonData($dbh);
@@ -148,7 +182,7 @@ sub CalcCodonFreq($$) {
 			my $codonRatio;
 			
 			#calculate the frequency and ratio of the codon usage for the gene
-			if (1 == exists($codonCounts{$codon})) {
+			if (exists($codonCounts{$codon})) {
 							
 				$codonFreq = $codonCounts{$codon}*1000/$totalCount;
 					
@@ -167,9 +201,9 @@ sub CalcCodonFreq($$) {
 			
 		}
 
-	#if no or limited codon reference data is found, GetCodonData prints a message		
-
-	}
+	}	
+	#if no or limited codon reference data is found, GetCodonData prints a message
+	#if no codon reference data is found, subroutine returns empty hash
 	
 	return %codons;
 
@@ -193,7 +227,7 @@ sub CalcCodonFreq($$) {
 #-----------------------------------------------------------------------------------------
 
 #FindRestrictionSites - manual test
-#my @results = FindRestrictionSites('CD123456','ATGTA');
+#my @results = FindRestrictionSites('CD123456','ACTGT');
 #my %matches = %{@results[0]};
 #my $upDownStreamOnly = @results[1];
 #foreach my $match(keys(%matches)) {
@@ -207,7 +241,7 @@ sub FindRestrictionSites($$) {
 
 	my ($accessionNo, $siteSeq) = @_;	
 	$accessionNo && $siteSeq
-		or die ("Unable to process request for restriction site data");
+		or die ("Unable to process request for restriction site data for this accession number: " . $accessionNo . ", and site sequence: " . $siteSeq);
 
 	my $dbh = DbiHandle::GetDbHandle();
 	my @gene = GenBankData::GetGeneData($accessionNo, $dbh);
@@ -220,69 +254,61 @@ sub FindRestrictionSites($$) {
 	if (@gene) {
 
 		my $dnaSeq = @gene[4];
+		my $siteSeqLen = length($siteSeq);
 		
-		if ($dnaSeq) {
-			
-			my $siteSeqLen = length($siteSeq);
-			
-			#find matches for the restriction site sequence and append to the return hash
-			while($dnaSeq =~ /$siteSeq/g){
-				$matches{pos($dnaSeq)-$siteSeqLen+1} = pos($dnaSeq);
-			}
-			
-			if (%matches) {
-			
-				my $complementFlag = @gene[8];
-				my $seqLength = @gene[7];
+		#find matches for the restriction site sequence and append to the return hash
+		while($dnaSeq =~ /$siteSeq/g){
+			$matches{pos($dnaSeq)-$siteSeqLen+1} = pos($dnaSeq);
+		}
 		
-				my %exons = GenBankData::GetExonData($accessionNo, $complementFlag, $seqLength, $dbh);
+		if (%matches) {
+		
+			my $complementFlag = @gene[8];
+			my $seqLength = @gene[7];
+	
+			my %exons = GenBankData::GetExonData($accessionNo, $complementFlag, $seqLength, $dbh);
+			
+			if (%exons) {
+			
+				#get the boundaries for the up and downstream regions
+				my @exonStartAsc = sort({$a<=>$b} keys(%exons));
+				my $codingStart = @exonStartAsc[0];
+				my @exonEndDesc = sort({$b<=>$a} values(%exons));
+				my $codingEnd = @exonEndDesc[0];
 				
-				if (%exons) {
+				#look for restriction sites between the up and downstream regions, 
+				#if find one, set the flag to false and stop looking
+				foreach my $match(keys(%matches)) {
+					if ($matches{$match} >= $codingStart && $match <= $codingEnd) {
+						$upDownStreamOnly = "F";
+						last;
+					}
+				}
 				
-					#get the boundaries for the up and downstream regions
-					my @exonStartAsc = sort({$a<=>$b} keys(%exons));
-					my $codingStart = @exonStartAsc[0];
-					my @exonEndDesc = sort({$b<=>$a} values(%exons));
-					my $codingEnd = @exonEndDesc[0];
-					
-					#look for restriction sites between the up and downstream regions, 
-					#if find one, set the flag to false and stop looking
-					foreach my $match(keys(%matches)) {
-						if ($matches{$match} >= $codingStart && $match <= $codingEnd) {
-							$upDownStreamOnly = "F";
-							last;
-						}
-					}
-					
-					#if no restriction sites found between the up and downstream regions, set the flag to true
-					if ($upDownStreamOnly eq "N") {
-						$upDownStreamOnly = "T";
-					}
+				#if no restriction sites found between the up and downstream regions, set the flag to true
+				if ($upDownStreamOnly eq "N") {
+					$upDownStreamOnly = "T";
+				}
 
-				}
-				
-				#if no exon data is found for the gene, set the flag to unknown
-				else {
-					$upDownStreamOnly = "U";
-				}
-				
-				#if no exon records are found, GetExonData prints a message
-				
 			}
 			
+			#if no exon data is found for the gene, set the flag to unknown
 			else {
-				print ("No restriction sites found for this accession number: " . $accessionNo . ", and restriction sequence: " . $siteSeq . "\n");
+				$upDownStreamOnly = "U";
 			}
+			
+			#if no exon records are found, GetExonData prints a message
 			
 		}
 		
 		else {
-			print ("No DNA sequence found for this accession number: " . $accessionNo . "\n");
+			print ("No restriction sites found for this accession number: " . $accessionNo . ", and restriction sequence: " . $siteSeq . "\n");
+			#subroutine returns empty hash
 		}
-		
-	#if no gene records are found, GetGeneData prints a message
 	
 	}	
+	#if no gene records are found, GetGeneData prints a message
+	#subroutine returns empty hash
 	
 	$dbh->disconnect();	
 	

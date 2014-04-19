@@ -27,7 +27,7 @@ use strict;
 #my $dbh = DbiHandle::GetDbHandle();
 #my %codons = GetCodonData($dbh);
 #foreach my $codon(keys(%codons)) {
-#	print $codon, ", ", @{$codons{$codon}}, "\n";
+	#print $codon, ", ", @{$codons{$codon}}, "\n";
 #}	
 
 #-----------------------------------------------------------------------------------------
@@ -36,7 +36,7 @@ sub GetCodonData($) {
 	
 	my ($dbh) = @_;	
 	$dbh
-		or die ("Unable to process request for codon reference data");
+		or die ("Unable to process request for codon reference data: unable to access database");
 	
 	#create and run a query to return the codon reference records including amino acid and genome stats
 	my $sql = 
@@ -56,12 +56,13 @@ sub GetCodonData($) {
 	}
 	
 	if ($sth->rows > 0 && $sth->rows < 64) {
-        print ("Codon reference data incomplete.\n");
-    }
+        	print ("Codon reference data incomplete.\n");
+    	}
 	
 	if (0 == $sth->rows) {
-        print ("No codons included in reference data.\n");
-    }
+		print ("No codons included in reference data.\n");
+		#subroutine returns empty hash
+    	}
 
 	$sth->finish;	
 	
@@ -97,11 +98,11 @@ sub GetEnzymeData($) {
 
 	my ($dbh) = @_;
 	$dbh
-		or die ("Unable to process request for restriction enzyme data");
+		or die ("Unable to process request for restriction enzyme data: unable to access database");
 
 	#create and run a query to return the enzyme reference records
 	my $sql = 
-	"SELECT abbreviation, restriction_seq
+	"SELECT re_name, restriction_seq
 	FROM restriction_enzyme";
 	
 	my $sth = $dbh->prepare($sql)
@@ -117,7 +118,8 @@ sub GetEnzymeData($) {
 	}
 	
 	if (0 == $sth->rows) {
-        print ("No restriction enzymes included in reference data.\n");
+        	print ("No restriction enzymes included in reference data.\n");
+		#subroutine returns empty hash
 	}
 	
 	$sth->finish;

@@ -32,7 +32,6 @@ if (%codons) {
 		$acidFreqs{$acid} += $codonFreq;
 		
 	}
-	print "\n";
 	
 	#for each of the 64 codons
 	foreach my $codon(keys(%codons)) {
@@ -71,8 +70,6 @@ if (%codons) {
 	}
 
 $dbh->disconnect();	
-	
-#if no or limited codon reference data is found, GetCodonData prints a message	
 	
 }
 
