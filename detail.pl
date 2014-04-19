@@ -4,7 +4,10 @@ use strict;
 my $cgi = new CGI;
 my $form = $cgi->param('form');
 
+#call module to get database details
+
 print $cgi->header();
+print <<__EOF;
 <html lang="en">
   <head>
     <meta charset="utf-8">
@@ -28,19 +31,29 @@ print $cgi->header();
 #Show amino acid sequence
 print <<__EOF;
 
+#beak down amino acid sequence into strings of 20 - display with courier
+#display sequence in 1 column 2 row table
+
 __EOF
 
 #Show codon usage frequency
 print <<__EOF;
+
+#Build table 
 
 __EOF
 
 #Show complete DNA sequence
 print <<__EOF;
 
+#break down sequence into strings of 50 - display with Courier
+#display in one column table
+
 __EOF
 
 #menu for choosing restriction enzyme sites
 print <<__EOF;
+
+#use bootstrap to create a menu for selecting 
 
 __EOF
