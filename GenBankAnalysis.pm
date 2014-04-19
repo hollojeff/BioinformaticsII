@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 #Name: Ginny Devonshire
-#Module: GenBankAnalysis
+#Middle layer module: GenBankAnalysis
+#Includes: sub-routines to analyse and/or collate genbank data
 
 package GenBankAnalysis;
 
@@ -13,15 +14,13 @@ use ReferenceData;
 
 #GetDetail - notes
 
-#collates gene, exon, codon, and enzyme data for a specific gene for displaying on the detail web page
-#routes: summary web page > GetDetail	> GetGeneData			> GetDetail > detail web page
-#					> GetExonData			>
-#					> CalcCodonFreq > GetCodonData	>
-#					> GetEnzymeData			>
+#collates gene, exon, codon, and enzyme data for a gene selected by the user
+#outputs used for display on the detail web page
+#summary page >> GetDetail >> detail page
 
 #input: accession number
 #outputs: references to gene detail array, exon hash, codon hash, enzyme hash
-#gene detail array values ~ accession no, location, gene id,  product, DNA sequence, coding sequence, product sequence
+#gene detail array values ~ accession no, location, gene id,  product, DNA sequence, coding sequence, product sequence, dna sequence length, complement flag
 #exon hash keys ~ exon start positions, exon hash values ~ exon end positions
 #codon hash keys ~ codons, codon hash values ~ references to codon arrays
 #codon array values ~ amino acid, genome freqquency, genome ratio, gene frequency, gene ratio
@@ -57,10 +56,20 @@ sub GetDetail($) {
 	my $dbh = DbiHandle::GetDbHandle();
 
 	my @gene = GenBankData::GetGeneData($accessionNo, $dbh);
-	my %exons = GenBankData::GetExonData($accessionNo, $dbh);
 	
+	my $complementFlag = @gene[8];
+	my $seqLength = @gene[7];
+		
+	my %exons = GenBankData::GetExonData($accessionNo, $complementFlag, $seqLength, $dbh);
+	
+	my %codons;
 	my $codingSeq = @gene[5];
-	my %codons = CalcCodonFreq($codingSeq, $dbh);
+	if ($codingSeq) {
+		%codons = CalcCodonFreq($codingSeq, $dbh);
+	}
+	else {
+		print ("No coding sequence found for this accession number: " . $accessionNo . "\n");
+	}
 	
 	my %enzymes = ReferenceData::GetEnzymeData($dbh);
 	
@@ -73,8 +82,9 @@ sub GetDetail($) {
 
 #CalcCodonFreq - notes
 
-#calculates codon frequencies and ratios for a specific gene for populating a table on the detail web page
-#route: summary web page > GetDetail > CalcCodonFreq > GetCodonData > CalcCodonFreq > GetDetail > detail web page
+#calculates codon usage frequencies and ratios for a gene selected by the user and appends this to the usage data for the genome
+#output used to populate a table on the detail web page
+#summary page >> GetDetail >> CalcCodonFreq >> GetDetail >> detail page
 
 #input: coding sequence, database handle
 #output: hash
@@ -96,50 +106,70 @@ sub CalcCodonFreq($$) {
 
 	my ($codingSeq, $dbh) = @_;
 	$codingSeq && $dbh
-		or die ("Unable to process request for codon frequency data");
+		or die ("Unable to process request to calculate codon frequencies");
 	
+	#get the codon reference data (uracil base used)
 	my %codonsU = ReferenceData::GetCodonData($dbh);
 	my %codons;
 	
-	foreach my $codonU(keys(%codonsU)) {
-		my $codon = $codonU;		
-		$codon =~ s/U/T/g;
-		$codons{$codon} = $codonsU{$codonU};
-	}
+	if (%codonsU) {
 	
-	my %codonCounts;
-	my %acidCounts;
-	my $totalCount;
+		#create a copy of the reference data translating uracil to thymine
+		foreach my $codonU(keys(%codonsU)) {
+			my $codon = $codonU;		
+			$codon =~ s/U/T/g;
+			$codons{$codon} = $codonsU{$codonU};
+		}
+		
+		my %codonCounts;
+		my %acidCounts;
+		my $totalCount;
 
-	while ($codingSeq =~ /(.{3})/g) {	#wildcard used to maintain triplet positions if seq includes non-bases
+		#for each triplet in the sequence
+		#(the wildcard is used to maintain triplet positions if the sequence includes any non-bases)
+		while ($codingSeq =~ /(.{3})/g) {	
+			
+			#get the amino acid that the codon codes for
+			#(a copy of the codon data is used so that any non-codons included in the sequence are not added to the reference data)
+			my %codonsCopy = %codons;	
+			my $acid = @{$codonsCopy{$1}}[0]; 
+			
+			#increment the codon counts for the particular codon, the amino acid, and the sequence
+			$codonCounts{$1}++;
+			$acidCounts{$acid}++;
+			$totalCount++;
+			
+		}
 	
-		$codonCounts{$1}++;
-		
-		my %codonsCopy = %codons;	#copy used so non-codons are not added to hash if seq includes non-codons
-		my $acid = @{$codonsCopy{$1}}[0]; 
-		$acidCounts{$acid}++;
-		
-		$totalCount++;
-		
-	}
-	
-	foreach my $codon(keys(%codons)) {
-		
-		my $codonFreq = 0;
-		my $codonRatio = 0;
-		
-		if (1 == exists($codonCounts{$codon})) {
-						
-			$codonFreq = $codonCounts{$codon}*1000/$totalCount;
-				
-			my $acid = @{$codons{$codon}}[0];
-			$codonRatio = $codonCounts{$codon}/$acidCounts{$acid};
+		#for each of the 64 codons
+		foreach my $codon(keys(%codons)) {
+			
+			my $codonFreq;
+			my $codonRatio;
+			
+			#calculate the frequency and ratio of the codon usage for the gene
+			if (1 == exists($codonCounts{$codon})) {
+							
+				$codonFreq = $codonCounts{$codon}*1000/$totalCount;
+					
+				my $acid = @{$codons{$codon}}[0];
+				$codonRatio = $codonCounts{$codon}/$acidCounts{$acid};
 
+			}
+			
+			else {
+				$codonFreq = 0;
+				$codonRatio = 0;
+			}
+
+			#append the frequency and ratio for the gene to the frequency and ratio for the genome
+			push @{$codons{$codon}}, sprintf ("%.1f", $codonFreq), sprintf ("%.2f", $codonRatio);
+			
 		}
 
-		push @{$codons{$codon}}, sprintf ("%.1f", $codonFreq), sprintf ("%.2f", $codonRatio);
-		
-	}	
+	#if no or limited codon reference data is found, GetCodonData prints a message		
+
+	}
 	
 	return %codons;
 
@@ -149,10 +179,10 @@ sub CalcCodonFreq($$) {
 
 #FindRestrictionSites - notes
 
-#finds restriction sites for a specific gene and a specific enzyme for highlighting on the restriction page
-#flags whether restriction sites appear just in up/downstream regions or not
-#routes: detail web page > FindRestrictionSites > GetGeneData > FindRestrictionSites > restriction web page
-#												> GetExonData >
+#finds restriction sites for a gene and an enzyme selected by the user
+#flags whether any restriction sites are found, and if so, if they appear just in the up and downstream regions or not
+#outputs used for highlighting the sites on the DNA sequence on the restriction page
+#detail page >> FindRestrictionSites >> restriction page
 
 #inputs: accession number, restriction sequence
 #outputs: hash reference, up/downstream only flag
@@ -160,11 +190,10 @@ sub CalcCodonFreq($$) {
 #first position = 1
 #flag values ~ T, true, F, False, U, unknown, N, no sites
 
-
 #-----------------------------------------------------------------------------------------
 
 #FindRestrictionSites - manual test
-#my @results = FindRestrictionSites('CD123456','GAT');
+#my @results = FindRestrictionSites('CD123456','ATGTA');
 #my %matches = %{@results[0]};
 #my $upDownStreamOnly = @results[1];
 #foreach my $match(keys(%matches)) {
@@ -183,75 +212,82 @@ sub FindRestrictionSites($$) {
 	my $dbh = DbiHandle::GetDbHandle();
 	my @gene = GenBankData::GetGeneData($accessionNo, $dbh);
 	
-	my %matches;	
-	#initialise restriction site flag, set to no restriction sites
+	my %matches;
+	
+	#initialise a restriction site flag, set to no restriction sites found / no data found
 	my $upDownStreamOnly = "N";
 
 	if (@gene) {
 
 		my $dnaSeq = @gene[4];
 		
-		if ($dnaSeq) { 
+		if ($dnaSeq) {
 			
 			my $siteSeqLen = length($siteSeq);
-	
+			
+			#find matches for the restriction site sequence and append to the return hash
 			while($dnaSeq =~ /$siteSeq/g){
 				$matches{pos($dnaSeq)-$siteSeqLen+1} = pos($dnaSeq);
 			}
 			
 			if (%matches) {
 			
-				my %exons = GenBankData::GetExonData($accessionNo, $dbh);
-						
+				my $complementFlag = @gene[8];
+				my $seqLength = @gene[7];
+		
+				my %exons = GenBankData::GetExonData($accessionNo, $complementFlag, $seqLength, $dbh);
+				
 				if (%exons) {
 				
+					#get the boundaries for the up and downstream regions
 					my @exonStartAsc = sort({$a<=>$b} keys(%exons));
 					my $codingStart = @exonStartAsc[0];
 					my @exonEndDesc = sort({$b<=>$a} values(%exons));
 					my $codingEnd = @exonEndDesc[0];
 					
+					#look for restriction sites between the up and downstream regions, 
+					#if find one, set the flag to false and stop looking
 					foreach my $match(keys(%matches)) {
-					
-						#if find a restriction site between up and downstream regions, set flag to false
 						if ($matches{$match} >= $codingStart && $match <= $codingEnd) {
 							$upDownStreamOnly = "F";
 							last;
 						}
-					
 					}
 					
-					#if no restriction sites found between up and downstream regions, set flag to true
+					#if no restriction sites found between the up and downstream regions, set the flag to true
 					if ($upDownStreamOnly eq "N") {
 						$upDownStreamOnly = "T";
 					}
 
 				}
 				
+				#if no exon data is found for the gene, set the flag to unknown
 				else {
-					#no exon data, set flag to unknown
 					$upDownStreamOnly = "U";
 				}
+				
+				#if no exon records are found, GetExonData prints a message
 				
 			}
 			
 			else {
-				print ("No restriction sites found for this enzyme in this gene.\n");
+				print ("No restriction sites found for this accession number: " . $accessionNo . ", and restriction sequence: " . $siteSeq . "\n");
 			}
 			
 		}
 		
 		else {
-			print ("No DNA sequence data found for this gene.\n");
+			print ("No DNA sequence found for this accession number: " . $accessionNo . "\n");
 		}
-
+		
+	#if no gene records are found, GetGeneData prints a message
+	
 	}	
+	
+	$dbh->disconnect();	
 	
 	return \%matches, $upDownStreamOnly;
 	
-	$dbh->disconnect();
-	
 }
-
-#=========================================================================================
 
 1;
