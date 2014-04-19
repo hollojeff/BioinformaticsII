@@ -118,7 +118,7 @@ sub GetEnzymeData($) {
 	}
 	
 	if (0 == $sth->rows) {
-        print ("No restriction enzymes included in reference data.\n");
+        	print ("No restriction enzymes included in reference data.\n");
 		#subroutine returns empty hash
 	}
 	
