@@ -44,12 +44,27 @@ print <<__EOF;
 __EOF
 
 #Show complete DNA sequence
-print <<__EOF;
 
-#break down sequence into strings of 50 - display with Courier
-#display in one column table
+my @cstart = keys %exon;
+my @cfinish = values %exon;
+my $ccount = 0;
 
-__EOF
+for (my $sequence=0, $sequence < length($string), $sequence++){
+	for (my $para=0, $para < 50, $para++){
+		my $base = substr($string, $sequence, 1);
+		if ($base == @cstart[$ccount]){
+			print "<span style="background-color: #FFFF00">";
+			}
+		if ($base == @cfinish[$ccount]){
+			print "</span>";
+			$ccount++;
+			}
+		print $base;
+		}
+	print "<p>";
+	}
+}
+
 
 #menu for choosing restriction enzyme sites
 print <<__EOF;
