@@ -28,20 +28,35 @@ print <<__EOF;
       <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
   </head>
-#Show amino acid sequence
-print <<__EOF;
-
-#beak down amino acid sequence into strings of 20 - display with courier
-#display sequence in 1 column 2 row table
-
+  
 __EOF
+
+ 
+#Show amino acid sequence
+
+my @codseq = unpack("(A50)*", $codingsequence);
+my @amiseq = unpack("(A50)*", $aminosequence);
+
+for (my i=0, i<length(@amiseq), i++){
+print @amiseq[i];
+}
+
+for (my i=0, i<length(@codseq), i++){
+print @codseq[i];
+}
 
 #Show codon usage frequency
-print <<__EOF;
 
-#Build table 
-
+for (my $i = 0, $i < 16*16, $i=$i+16){
+print <<__EOF
+<tr>
+    <td> @codon[i] </td> <td> @codon[i+1] </td> <td> @codon[i+2] </td> <td> @codon[i+3] </td>
+	<td> @codon[i+4] </td> <td> @codon[i+5] </td> <td> @codon[i+6] </td> <td> @codon[i+7] </td>
+	<td> @codon[i+9] </td> <td> @codon[i+9] </td> <td> @codon[i+10] </td> <td> @codon[i+11] </td>
+	<td> @codon[i+13] </td> <td> @codon[i+13] </td> <td> @codon[i+14] </td> <td> @codon[i+15] </td>
+		</tr>
 __EOF
+}  
 
 #Show complete DNA sequence
 
@@ -71,4 +86,4 @@ print <<__EOF;
 
 #use bootstrap to create a menu for selecting 
 
-__EOF
+
