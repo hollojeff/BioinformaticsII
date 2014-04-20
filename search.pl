@@ -6,14 +6,20 @@ my $form = $cgi->param('form');
 my $search = $cgi->param('searchtype');
 my $return = $cgi->param('ReturnAll');
 
-
+if ($return == "Show All"){
+	$return = "T";
+	}
+	else {
+	$return ="F";
+}
 
 #Clicked on Show all button
 #Return all results
-if ($return == "Show All"){
+if ($return == "T"){
 
 #Call script to return all results
 
+my @return = GenBankData::GetSummaryData($search, $form, $return);
 
 print $cgi->header();
 print <<__EOF;
@@ -32,13 +38,13 @@ print <<__EOF;
 __EOF
    
 #for loop to build table
-for (my $i=1; $i < 10; $i++) { 
+for (my $i=0; $i < @return; $i=$i+4) { 
 print <<__EOF;
      <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-	<td></td>
+        <td> @return[i] </td>
+        <td> @return[i+1] </td>
+        <td> @return[i+2] </td>
+		<td> @return[i+3] </td>
       </tr>
 __EOF
 }
@@ -51,6 +57,8 @@ __EOF
 else {
 
 #Call script, sending over searchtype and form for SQL query
+
+my @return = GenBankData::GetSummaryData($search, $form, $return);
 
 print $cgi->header();
 print <<__BLAH;
@@ -72,13 +80,13 @@ print <<__BLAH;
 __EOF
    
 #for loop to build table
-for (my $i=1; $i < 10; $i++) { 
+for (my $i=0; $i < @return; $i=$i+4) { 
 print <<__EOF;
      <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-	<td></td>
+        <td> @return[i] </td>
+        <td> @return[i+1] </td>
+        <td> @return[i+2] </td>
+		<td> @return[i+3] </td>
       </tr>
 __EOF
 }
