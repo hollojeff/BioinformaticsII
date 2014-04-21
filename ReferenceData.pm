@@ -60,7 +60,7 @@ sub GetCodonData($) {
     	}
 	
 	if (0 == $sth->rows) {
-		print ("No codons included in reference data.\n");
+        	print ("No codons included in reference data.\n");
 		#subroutine returns empty hash
     	}
 
@@ -80,7 +80,7 @@ sub GetCodonData($) {
 
 #input: database handle
 #output: hash
-#hash keys ~ enzyme abbreviations, hash values ~ restriction sequences
+#hash keys ~ enzyme abbreviations, hash values ~ recognition sequences
 
 #-----------------------------------------------------------------------------------------
 
@@ -89,7 +89,7 @@ sub GetCodonData($) {
 #my $dbh = DbiHandle::GetDbHandle();
 #my %enzymes = GetEnzymeData($dbh);
 #foreach my $enzyme(keys(%enzymes)) {
-#	print $enzyme, ", ", $enzymes{$enzyme}, "\n";
+#	print $enzyme, ", ", @{$enzymes{$enzyme}}, "\n";
 #}	
 
 #-----------------------------------------------------------------------------------------
@@ -102,7 +102,7 @@ sub GetEnzymeData($) {
 
 	#create and run a query to return the enzyme reference records
 	my $sql = 
-	"SELECT re_name, restriction_seq
+	"SELECT re_name, restriction_seq, cutting_offset
 	FROM restriction_enzyme";
 	
 	my $sth = $dbh->prepare($sql)
@@ -114,11 +114,11 @@ sub GetEnzymeData($) {
 	#append each record to the return hash		
 	my %enzymes;
 	while (my @row = $sth->fetchrow_array) {
-		$enzymes{@row[0]} = @row[1]; 
-	}
+		push @{$enzymes{@row[0]}}, @row[1], @row[2]; 
+	}	
 	
 	if (0 == $sth->rows) {
-        	print ("No restriction enzymes included in reference data.\n");
+        print ("No restriction enzymes included in reference data.\n");
 		#subroutine returns empty hash
 	}
 	

@@ -213,21 +213,22 @@ sub CalcCodonFreq($$) {
 
 #FindRestrictionSites - notes
 
-#finds restriction sites for a gene and an enzyme selected by the user
-#flags whether any restriction sites are found, and if so, if they appear just in the up and downstream regions or not
-#outputs used for highlighting the sites on the DNA sequence on the restriction page
+#finds restriction enzyme sites for a gene and an enzyme selected or entered by the user
+#flags whether any restriction sites are found, and if so, if the enzyme cuts just in the up and downstream regions or not
+#outputs used for highlighting the restriction sites on the DNA sequence on the restriction page
 #detail page >> FindRestrictionSites >> restriction page
 
-#inputs: accession number, restriction sequence
+#inputs: accession number, recognition sequence, cutting offset from 5' end of recognition sequence
+#0 ~ cuts immediately upstream of sequence, -1 ~ cuts one base upstream of sequence, +1 ~ cuts one base downstream of sequence, and so on
 #outputs: hash reference, up/downstream only flag
-#hash keys ~ restriction site start positions, hash values ~ restriction site end posiions
+#hash keys ~ recognition sequence start positions, hash values ~ recognition sequence end positions
 #first position = 1
 #flag values ~ T, true, F, False, U, unknown, N, no sites
 
 #-----------------------------------------------------------------------------------------
 
 #FindRestrictionSites - manual test
-#my @results = FindRestrictionSites('CD123456','ACTGT');
+#my @results = FindRestrictionSites('CD123456','ACTBB', '-1');
 #my %matches = %{@results[0]};
 #my $upDownStreamOnly = @results[1];
 #foreach my $match(keys(%matches)) {
@@ -237,11 +238,11 @@ sub CalcCodonFreq($$) {
 
 #-----------------------------------------------------------------------------------------
 
-sub FindRestrictionSites($$) {
+sub FindRestrictionSites($$$) {
 
-	my ($accessionNo, $siteSeq) = @_;	
-	$accessionNo && $siteSeq
-		or die ("Unable to process request for restriction site data for this accession number: " . $accessionNo . ", and site sequence: " . $siteSeq);
+	my ($accessionNo, $siteSeq, $cutOffset) = @_;	
+	$accessionNo && $siteSeq && $cutOffset ne ""
+		or die ("Unable to process request for restriction site data for this accession number: " . $accessionNo . ", site sequence: " . $siteSeq . ", and cutting offset: " . $cutOffset);
 
 	my $dbh = DbiHandle::GetDbHandle();
 	my @gene = GenBankData::GetGeneData($accessionNo, $dbh);
@@ -255,8 +256,14 @@ sub FindRestrictionSites($$) {
 
 		my $dnaSeq = @gene[4];
 		my $siteSeqLen = length($siteSeq);
+
+		#replace base codes in the recognition sequence with a regex pattern
+		my %basePatterns = (N => "[ACGT]", 
+		M => "[AC]", R => "[AG]", W => "[AT]", Y => "[CT]", S => "[CG]", K => "[GT]", 
+		H => "[ACT]", B => "[CGT]", V => "[ACG]", D => "[AGT]");
+		$siteSeq =~ s/([^ACGT])/$basePatterns{$1}/g;
 		
-		#find matches for the restriction site sequence and append to the return hash
+		#find matches for the recognition sequence and append to the return hash
 		while($dnaSeq =~ /$siteSeq/g){
 			$matches{pos($dnaSeq)-$siteSeqLen+1} = pos($dnaSeq);
 		}
@@ -276,16 +283,27 @@ sub FindRestrictionSites($$) {
 				my @exonEndDesc = sort({$b<=>$a} values(%exons));
 				my $codingEnd = @exonEndDesc[0];
 				
-				#look for restriction sites between the up and downstream regions, 
+				#look for restriction RECOGNITION sites between the up and downstream regions, 
+				#including sites that overlap the up or downstream region,
+				#if find one, set the flag to false and stop looking
+				#foreach my $match(keys(%matches)) {
+				#	if ($matches{$match} >= $codingStart && $match <= $codingEnd) {
+				#		$upDownStreamOnly = "F";
+				#		last;
+				#	}
+				#}
+				
+				#look for restriction CUTTING sites between the up and downstream regions, 
+				#excluding cutting sites exactly on the boundaries,
 				#if find one, set the flag to false and stop looking
 				foreach my $match(keys(%matches)) {
-					if ($matches{$match} >= $codingStart && $match <= $codingEnd) {
+					if ($match + $cutOffset > $codingStart && $match + $cutOffset <= $codingEnd) {
 						$upDownStreamOnly = "F";
 						last;
 					}
 				}
 				
-				#if no restriction sites found between the up and downstream regions, set the flag to true
+				#if no sites found between the up and downstream regions, set the flag to true
 				if ($upDownStreamOnly eq "N") {
 					$upDownStreamOnly = "T";
 				}
