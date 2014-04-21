@@ -47,6 +47,21 @@ print @codseq[i];
 
 #Show codon usage frequency
 
+#sort codons as hash will be scrambled
+
+@codlet = ("A","C","G","T");
+
+for ( $i=0; $i<4; $i=$i + 1){
+	 $first = $codlet[$i];
+	for ( $j=0; $j<4; $j++){
+		 $second = $codlet[$j];
+		for ( $k=0; $k<4; $k++){
+			 $third = $codlet[$k];
+             #add code to search hash here
+		}
+	}
+}
+
 for (my $i = 0, $i < 16*16, $i=$i+16){
 print <<__EOF
 <tr>
