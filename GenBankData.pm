@@ -24,10 +24,10 @@ use DbiHandle;
 #-----------------------------------------------------------------------------------------
 
 #GetSummaryData - manual test
-my @summary = GetSummaryData('prod', 'glycos%', "F");
-foreach my $row(@summary) {
-	print @{$row}, "\n";
-}
+#my @summary = GetSummaryData('geneid', 'ABC2', "F");
+#foreach my $row(@summary) {
+#	print @{$row}, "\n";
+#}
 
 #-----------------------------------------------------------------------------------------
 
@@ -64,7 +64,7 @@ sub GetSummaryData($$$) {
 				if ($value =~ /^%.*/ || $value =~ /.*%$/) {
 					$sqlOperator = "LIKE";
 				}
-				$sql = $sql." WHERE ".$filter." ".$sqlOperator." ?";
+				$sql = $sql." WHERE ".$sqlFilter." ".$sqlOperator." ?";
 			
 			}
 			
@@ -156,7 +156,7 @@ sub GetGeneData($$) {
 	my @gene = $sth->fetchrow_array;
 	
 	if (0 == $sth->rows) {
-        	print ("No gene records found for this accession number: " . $accessionNo . "\n");
+        print ("No gene records found for this accession number: " . $accessionNo . "\n");
 		#subroutine returns empty array
 	}
 	
@@ -169,9 +169,9 @@ sub GetGeneData($$) {
 
 		#if the gene is on the complementary strand, convert the dna and coding sequences 
 		if (@gene[8] eq "Y") {
-			@gene[4] = ReverseComplementSequence(@gene[4]);
+			@gene[4] = ReverseComplementSeq(@gene[4]);
 			if (@gene[5]) {
-				@gene[5] = ReverseComplementSequence(@gene[5]);
+				@gene[5] = ReverseComplementSeq(@gene[5]);
 			}
 		}
 		#if the gene is not on the complementary strand, set the complement flag to no, if not done in database
@@ -179,7 +179,7 @@ sub GetGeneData($$) {
 			@gene[8] = "N"
 		}
 	
-    }
+    	}
 
 	$sth->finish;
 
@@ -269,7 +269,7 @@ sub GetExonData($$$$) {
 
 #=========================================================================================
 
-#ReverseComplementSequence - notes
+#ReverseComplementSeq - notes
 
 #generates the sequence of the complementary dna strand and reverses it
 #output used for display of the dna sequence and coding sequence with the 5' to 3' direction reading from left to right,
@@ -283,21 +283,21 @@ sub GetExonData($$$$) {
 
 #-----------------------------------------------------------------------------------------
 
-#ReverseComplementSequence - manual test
+#ReverseComplementSeq - manual test
 #my $seq = "";
 #print scalar(reverse($seq)), "\n";
 #print ReverseComplementSequence($seq);
 
 #-----------------------------------------------------------------------------------------
 
-sub ReverseComplementSequence($) {
+sub ReverseComplementSeq($) {
 
 	my ($sequence) = @_;	
 	$sequence
 		or die ("Unable to process request to complement and reverse sequence: sequence not specified");
 	
+	#replace bases with their complements
 	my %baseComplements = (A => "T", C => "G", G => "C", T => "A");
-
 	$sequence =~ s/([ACGT])/$baseComplements{$1}/g;
 	
 	$sequence = scalar(reverse($sequence));
