@@ -38,16 +38,16 @@ print <<__EOF;
 __EOF
    
 #for loop to build table
-for (my $i=0; $i < @return; $i=$i+4) { 
+for (my $i=0; $i < scalar @return; $i=$i+4) { 
 print <<__EOF;
      <tr>
-        <td> @return[i] </td>
-        <td> @return[i+1] </td>
-        <td> @return[i+2] </td>
-		<td> @return[i+3] </td>
-      </tr>
+        <td> $return[$i] </td>
+        <td> $return[$i+1] </td>
+        <td> $return[$i+2] </td>
+		<td> $return[$i+3] </td>
+		<td><button type="submit" name="action" value="$return[$i+2]">Details</button></td>
+     </tr>
 __EOF
-}
 print <<__EOF
 </body>
 </html>
@@ -61,7 +61,7 @@ else {
 my @return = GenBankData::GetSummaryData($search, $form, $return);
 
 print $cgi->header();
-print <<__BLAH;
+print <<__EOF;
 <html>
 <head>
    <title>Sequence Analysis Results</title>
@@ -80,16 +80,18 @@ print <<__BLAH;
 __EOF
    
 #for loop to build table
-for (my $i=0; $i < @return; $i=$i+4) { 
+for (my $i=0; $i < scalar @return; $i=$i+4) { 
 print <<__EOF;
      <tr>
-        <td> @return[i] </td>
-        <td> @return[i+1] </td>
-        <td> @return[i+2] </td>
-		<td> @return[i+3] </td>
-      </tr>
+        <td> $return[$i] </td>
+        <td> $return[$i+1] </td>
+        <td> $return[$i+2] </td>
+		<td> $return[$i+3] </td>
+		<td><button type="submit" name="action" value="$return[$i+2]">Details</button></td>
+     </tr>
 __EOF
 }
+
 print <<__EOF
 </body>
 </html>

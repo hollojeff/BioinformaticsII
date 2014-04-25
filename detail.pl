@@ -37,12 +37,12 @@ __EOF
 my @codseq = unpack("(A50)*", $codingsequence);
 my @amiseq = unpack("(A50)*", $aminosequence);
 
-for (my i=0, i<length(@amiseq), i++){
-print @amiseq[i];
+for (my $i=0; $i < scalar @amiseq; $i++){
+print $amiseq[$i],"<br>";
 }
 
-for (my i=0, i<length(@codseq), i++){
-print @codseq[i];
+for (my $i=0; $i < scalar @codseq; $i++){
+print $codseq[$i],"<br>";
 }
 
 #Show codon usage frequency
@@ -75,24 +75,24 @@ __EOF
 
 #Show complete DNA sequence
 
-my @cstart = keys %exon;
-my @cfinish = values %exon;
+my @cstart = sort { $a <=> $b } keys %exon;
+my @cfinish = sort { $a <=> $b } values %exon;
 my $ccount = 0;
 
-for (my $sequence=0, $sequence < length($string), $sequence++){
-	for (my $para=0, $para < 50, $para++){
+for (my $sequence=0; $sequence < length($string); $sequence++){
+
 		my $base = substr($string, $sequence, 1);
-		if ($base == @cstart[$ccount]){
-			print "<span style="background-color: #FFFF00">";
+		if ($sequence == @cstart[$ccount]){
+			print "<span style=\"background-color: #FFFF00\">";
 			}
-		if ($base == @cfinish[$ccount]){
+		if ($sequence == @cfinish[$ccount]){
 			print "</span>";
 			$ccount++;
 			}
 		print $base;
+		if (($sequence+1)%50 == 0){
+			print "<br>";
 		}
-	print "<p>";
-	}
 }
 
 
