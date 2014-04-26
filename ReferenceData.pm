@@ -80,7 +80,8 @@ sub GetCodonData($) {
 
 #input: database handle
 #output: hash
-#hash keys ~ enzyme abbreviations, hash values ~ recognition sequences
+#hash keys ~ enzyme abbreviations, hash values ~ references to arrays
+#array values ~ recognition sequence, cutting offset
 
 #-----------------------------------------------------------------------------------------
 
@@ -118,7 +119,7 @@ sub GetEnzymeData($) {
 	}	
 	
 	if (0 == $sth->rows) {
-        print ("No restriction enzymes included in reference data.\n");
+        	print ("No restriction enzymes included in reference data.\n");
 		#subroutine returns empty hash
 	}
 	
