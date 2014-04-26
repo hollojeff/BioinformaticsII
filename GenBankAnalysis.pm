@@ -24,12 +24,13 @@ use ReferenceData;
 #exon hash keys ~ exon start positions, exon hash values ~ exon end positions
 #codon hash keys ~ codons, codon hash values ~ references to codon arrays
 #codon array values ~ amino acid, genome freqquency, genome ratio, gene frequency, gene ratio
-#enzyme hash keys ~ enzyme names, enzyme hash values ~ restriction sequences
+#enzyme hash keys ~ enzyme abbreviations, enzyme hash values ~ references to arrays
+#enzyme array values ~ recognition sequence, cutting offset
 
 #-----------------------------------------------------------------------------------------
 
 #GetDetail - manual test
-#my @detail = GetDetail('AB123456');
+#my @detail = GetDetail('CD123456');
 #my @gene = @{@detail[0]};
 #my %exons = %{@detail[1]};
 #my %codons = %{@detail[2]};
@@ -42,7 +43,7 @@ use ReferenceData;
 #	print $codon, ", ", @{$codons{$codon}}, "\n";
 #}	
 #foreach my $enzyme(keys(%enzymes)) {
-#	print $enzyme, ", ", $enzymes{$enzyme}, "\n";
+#	print $enzyme, ", ", @{$enzymes{$enzyme}}, "\n";
 #}	
 
 #-----------------------------------------------------------------------------------------
@@ -62,22 +63,30 @@ sub GetDetail($) {
 	my %enzymes;
 	
 	if (@gene) {
-	
+
 		unless (@gene[1]) {
 			print ("No location found for this accession number: " . $accessionNo . "\n");
 		}
-		
 		unless (@gene[2]) {
 			print ("No gene ID found for this accession number: " . $accessionNo . "\n");
 		}
 	
-		my $complementFlag = @gene[8];
-		my $seqLength = @gene[7];
-			
-		%exons = GenBankData::GetExonData($accessionNo, $complementFlag, $seqLength, $dbh);
-		#if no exon records are found, GetExonData prints a message
-		#subroutine returns empty exon hash
+		#if the dna sequence is available in the database
+		if (@gene[4]) {
+	
+			my $complementFlag = @gene[8];
+			my $seqLength = @gene[7];
 		
+			%exons = GenBankData::GetExonData($accessionNo, $complementFlag, $seqLength, $dbh);
+			#if no exon records are found, GetExonData prints a message
+			#subroutine returns empty exon hash	
+			
+		}
+		else {
+			print ("No DNA sequence found for this accession number: " . $accessionNo . "\n");
+			#subroutine returns empty exon hash	
+		}
+			
 		my $codingSeq = @gene[5];
 		if ($codingSeq) {
 			%codons = CalcCodonFreq($codingSeq, $dbh);
@@ -86,12 +95,12 @@ sub GetDetail($) {
 		}
 		else {
 			print ("No coding sequence found for this accession number: " . $accessionNo . "\n");
+			#subroutine returns empty codon hash
 		}
 		
 		unless (@gene[6]) {
 			print ("No amino acid sequence found for this accession number: " . $accessionNo . "\n");
 		}
-		
 		unless (@gene[3]) {
 			print ("No product found for this accession number: " . $accessionNo . "\n");
 		}
@@ -219,10 +228,9 @@ sub CalcCodonFreq($$) {
 #detail page >> FindRestrictionSites >> restriction page
 
 #inputs: accession number, recognition sequence, cutting offset from 5' end of recognition sequence
-#0 ~ cuts immediately upstream of sequence, -1 ~ cuts one base upstream of sequence, +1 ~ cuts one base downstream of sequence, and so on
+#0 ~ cuts immediately upstream of sequence, -1 ~ cuts one base upstream of 5' end, +1 ~ cuts one base downstream of 5' end, and so on
 #outputs: hash reference, up/downstream only flag
 #hash keys ~ recognition sequence start positions, hash values ~ recognition sequence end positions
-#first position = 1
 #flag values ~ T, true, F, False, U, unknown, N, no sites
 
 #-----------------------------------------------------------------------------------------
@@ -253,75 +261,84 @@ sub FindRestrictionSites($$$) {
 	my $upDownStreamOnly = "N";
 
 	if (@gene) {
-
-		my $dnaSeq = @gene[4];
-		my $siteSeqLen = length($siteSeq);
-
-		#replace base codes in the recognition sequence with a regex pattern
-		my %basePatterns = (N => "[ACGT]", 
-		M => "[AC]", R => "[AG]", W => "[AT]", Y => "[CT]", S => "[CG]", K => "[GT]", 
-		H => "[ACT]", B => "[CGT]", V => "[ACG]", D => "[AGT]");
-		$siteSeq =~ s/([^ACGT])/$basePatterns{$1}/g;
-		
-		#find matches for the recognition sequence and append to the return hash
-		while($dnaSeq =~ /$siteSeq/g){
-			$matches{pos($dnaSeq)-$siteSeqLen+1} = pos($dnaSeq);
-		}
-		
-		if (%matches) {
-		
-			my $complementFlag = @gene[8];
-			my $seqLength = @gene[7];
 	
-			my %exons = GenBankData::GetExonData($accessionNo, $complementFlag, $seqLength, $dbh);
-			
-			if (%exons) {
-			
-				#get the boundaries for the up and downstream regions
-				my @exonStartAsc = sort({$a<=>$b} keys(%exons));
-				my $codingStart = @exonStartAsc[0];
-				my @exonEndDesc = sort({$b<=>$a} values(%exons));
-				my $codingEnd = @exonEndDesc[0];
-				
-				#look for restriction RECOGNITION sites between the up and downstream regions, 
-				#including sites that overlap the up or downstream region,
-				#if find one, set the flag to false and stop looking
-				#foreach my $match(keys(%matches)) {
-				#	if ($matches{$match} >= $codingStart && $match <= $codingEnd) {
-				#		$upDownStreamOnly = "F";
-				#		last;
-				#	}
-				#}
-				
-				#look for restriction CUTTING sites between the up and downstream regions, 
-				#excluding cutting sites exactly on the boundaries,
-				#if find one, set the flag to false and stop looking
-				foreach my $match(keys(%matches)) {
-					if ($match + $cutOffset > $codingStart && $match + $cutOffset <= $codingEnd) {
-						$upDownStreamOnly = "F";
-						last;
-					}
-				}
-				
-				#if no sites found between the up and downstream regions, set the flag to true
-				if ($upDownStreamOnly eq "N") {
-					$upDownStreamOnly = "T";
-				}
+		#if the dna sequence is available in the database
+		if (@gene[4]) {
 
+			my $dnaSeq = @gene[4];
+			my $siteSeqLen = length($siteSeq);
+
+			#replace base codes in the recognition sequence with a regex pattern
+			my %basePatterns = (N => "[ACGT]", 
+			M => "[AC]", R => "[AG]", W => "[AT]", Y => "[CT]", S => "[CG]", K => "[GT]", 
+			H => "[ACT]", B => "[CGT]", V => "[ACG]", D => "[AGT]");
+			$siteSeq =~ s/([^ACGT])/$basePatterns{$1}/g;
+			
+			#find matches for the recognition sequence and append to the return hash
+			while($dnaSeq =~ /$siteSeq/g){
+				$matches{pos($dnaSeq)-$siteSeqLen+1} = pos($dnaSeq);
 			}
 			
-			#if no exon data is found for the gene, set the flag to unknown
+			if (%matches) {
+			
+				my $complementFlag = @gene[8];
+				my $seqLength = @gene[7];
+		
+				my %exons = GenBankData::GetExonData($accessionNo, $complementFlag, $seqLength, $dbh);
+				
+				if (%exons) {
+				
+					#get the boundaries for the up and downstream regions
+					my @exonStartAsc = sort({$a<=>$b} keys(%exons));
+					my $codingStart = @exonStartAsc[0];
+					my @exonEndDesc = sort({$b<=>$a} values(%exons));
+					my $codingEnd = @exonEndDesc[0];
+					
+					#look for restriction RECOGNITION sites between the up and downstream regions, 
+					#including sites that overlap the up or downstream region,
+					#if find one, set the flag to false and stop looking
+					#foreach my $match(keys(%matches)) {
+					#	if ($matches{$match} >= $codingStart && $match <= $codingEnd) {
+					#		$upDownStreamOnly = "F";
+					#		last;
+					#	}
+					#}
+					
+					#look for restriction CUTTING sites between the up and downstream regions, 
+					#excluding cutting sites exactly on the boundaries,
+					#if find one, set the flag to false and stop looking
+					foreach my $match(keys(%matches)) {
+						if ($match + $cutOffset > $codingStart && $match + $cutOffset <= $codingEnd) {
+							$upDownStreamOnly = "F";
+							last;
+						}
+					}
+					
+					#if no sites found between the up and downstream regions, set the flag to true
+					if ($upDownStreamOnly eq "N") {
+						$upDownStreamOnly = "T";
+					}
+
+				}
+				
+				#if no exon data is found for the gene, set the flag to unknown
+				else {
+					$upDownStreamOnly = "U";
+				}
+				
+				#if no exon records are found, GetExonData prints a message
+				
+			}
+			
 			else {
-				$upDownStreamOnly = "U";
+				print ("No restriction sites found for this accession number: " . $accessionNo . ", and restriction sequence: " . $siteSeq . "\n");
+				#subroutine returns empty hash
 			}
-			
-			#if no exon records are found, GetExonData prints a message
 			
 		}
-		
 		else {
-			print ("No restriction sites found for this accession number: " . $accessionNo . ", and restriction sequence: " . $siteSeq . "\n");
-			#subroutine returns empty hash
+			print ("No DNA sequence found for this accession number: " . $accessionNo . "\n");
+			#subroutine returns empty hash	
 		}
 	
 	}	

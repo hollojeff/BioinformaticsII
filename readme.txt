@@ -50,7 +50,7 @@ GenBankProject
 |	|	|
 |	|	|__ModulesDoc.pdf (Ginny)
 |	|	|__TestScriptsDoc.pdf (Bojan)
-|	|	|
+|	|
 |	|__Modules (Ginny)
 |	|	|
 |	|	|__DbiConfig.cnf		
@@ -78,7 +78,7 @@ GenBankProject
 	|
 	|__DataScripts
 		|
-		|__(Irena)
+		|__(Irina)
 		|__Chrom_Freq_Parse.pl (Bojan)
 		|__UpdateReferenceData.pl (Ginny)
 

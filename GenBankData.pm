@@ -156,20 +156,27 @@ sub GetGeneData($$) {
 	my @gene = $sth->fetchrow_array;
 	
 	if (0 == $sth->rows) {
-        print ("No gene records found for this accession number: " . $accessionNo . "\n");
+        	print ("No gene records found for this accession number: " . $accessionNo . "\n");
 		#subroutine returns empty array
 	}
 	
-	else {
+	else {	
 	
-		#if the dna sequence length isn't available in the database, calculate 
-		if ("" == @gene[7] || 0 == @gene[7]) {
-			@gene[7] = length(@gene[4]);
+		#if the dna sequence length isn't available in the database or is zero, but the dna sequence is available, calculate length
+		unless (@gene[7]) {
+			if (@gene[4]) {
+				@gene[7] = length(@gene[4]);
+			}
+			else {
+				@gene[7] = 0;
+			}
 		}
 
 		#if the gene is on the complementary strand, convert the dna and coding sequences 
 		if (@gene[8] eq "Y") {
-			@gene[4] = ReverseComplementSeq(@gene[4]);
+			if (@gene[4]) {
+				@gene[4] = ReverseComplementSeq(@gene[4]);
+			}
 			if (@gene[5]) {
 				@gene[5] = ReverseComplementSeq(@gene[5]);
 			}
@@ -178,7 +185,7 @@ sub GetGeneData($$) {
 		elsif (@gene[8] ne "N") {
 			@gene[8] = "N"
 		}
-	
+
     	}
 
 	$sth->finish;
@@ -206,7 +213,7 @@ sub GetGeneData($$) {
 
 #GetExonData - manual test
 #my $dbh = DbiHandle::GetDbHandle();
-#my %exons = GetExonData('CD123456', 'N', '3000', $dbh);
+#my %exons = GetExonData('CD123456', 'N', '0', $dbh);
 #foreach my $exon(keys(%exons)) {
 #	print $exon, ", ", $exons{$exon}, "\n";
 #}
