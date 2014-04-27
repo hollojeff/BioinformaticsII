@@ -1,12 +1,14 @@
 #!/usr/bin/perl
+use GenBankData;
 use CGI;
 use strict;
 my $cgi = new CGI;
-my $form = $cgi->param('form');
+my $accno = $cgi->param(
 
-#call module to get database details
+@GeneData = GetGeneData::GenBankData(
 
-print $cgi->header();
+print $cgi -> header();
+
 print <<__EOF;
 <html lang="en">
   <head>
@@ -16,10 +18,10 @@ print <<__EOF;
     <title>Chromasome 4 Analysis</title>
 
     <!-- Bootstrap -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="http://student.cryst.bbk.ac.uk/~jhurst03/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
-    <link href="search-form.css" rel="stylesheet">
+    <link href="http://student.cryst.bbk.ac.uk/~jhurst03/css/search-form.css" rel="stylesheet">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -29,51 +31,119 @@ print <<__EOF;
     <![endif]-->
   </head>
   
+  <body>
+      <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Chromasome 4</a>
+        </div>
+        <div class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="http://student.cryst.bbk.ac.uk/~jhurst03/bootstrap.html">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </div>
+
+<div class="row">
+<div class="col-md-8">
+	
 __EOF
 
- 
-#Show amino acid sequence
+#sort out amino acid and coding sequences
 
-my @codseq = unpack("(A50)*", $codingsequence);
-my @amiseq = unpack("(A50)*", $aminosequence);
+
+
+my $aminosequence = "";
+my $codingsequence = "";
+
+my @codseq = unpack("(A100)*", $codingsequence);
+my @amiseq = unpack("(A100)*", $aminosequence);
+
+print <<EOF__;
+<div class="panel panel-default">
+  <div class="panel-heading">Amino Acid Sequence</div>
+  <div class="panel-body">
+<span style ="font-family: Courier;">
+EOF__
 
 for (my $i=0; $i < scalar @amiseq; $i++){
 print $amiseq[$i],"<br>";
 }
 
+print <<EOF__;
+</span>
+  </div>
+</div>
+<div class="panel panel-default">
+  <div class="panel-heading">Coding Sequence</div>
+  <div class="panel-body">
+<span style ="font-family: Courier;">
+EOF__
+
 for (my $i=0; $i < scalar @codseq; $i++){
 print $codseq[$i],"<br>";
 }
 
-#Show codon usage frequency
+print <<EOF__;
+</span>
+  </div>
+</div>
+<div class="panel panel-default">
+  <div class="panel-heading">Codon Table</div>
+  <div class="panel-body">
+<span style ="font-family: Courier;">
+EOF__
 
-#sort codons as hash will be scrambled
+#Call codon table variables
 
-@codlet = ("A","C","G","T");
+my @codlet = ("U","C","A","G");
+my @codtab;
 
-for ( $i=0; $i<4; $i=$i + 1){
-	 $first = $codlet[$i];
-	for ( $j=0; $j<4; $j++){
-		 $second = $codlet[$j];
-		for ( $k=0; $k<4; $k++){
-			 $third = $codlet[$k];
-             #add code to search hash here
+for (my $i=0; $i<4; $i=$i + 1){
+	 my $first = $codlet[$i];
+	for (my $j=0; $j<4; $j++){
+		 my $second = $codlet[$j];
+		for (my $k=0; $k<4; $k++){
+			my $third = $codlet[$k];
+           			push (@codtab, ); # 
 		}
 	}
 }
+print <<__EOF;
 
-for (my $i = 0, $i < 16*16, $i=$i+16){
-print <<__EOF
-<tr>
-    <td> @codon[i] </td> <td> @codon[i+1] </td> <td> @codon[i+2] </td> <td> @codon[i+3] </td>
-	<td> @codon[i+4] </td> <td> @codon[i+5] </td> <td> @codon[i+6] </td> <td> @codon[i+7] </td>
-	<td> @codon[i+9] </td> <td> @codon[i+9] </td> <td> @codon[i+10] </td> <td> @codon[i+11] </td>
-	<td> @codon[i+13] </td> <td> @codon[i+13] </td> <td> @codon[i+14] </td> <td> @codon[i+15] </td>
-		</tr>
+    <table>
+    <table border="1" style="width:300px">
+    <tr>
 __EOF
-}  
 
-#Show complete DNA sequence
+for (my $i = 0; $i < scalar @codtab; $i++){
+	print "<td>$codtab[$i]</td>";
+	if (($i+1)%16 == 0){
+		print "</tr><tr>";
+	}
+} 
+print "</table>";
+
+print <<EOF__;
+</span>
+  </div>
+</div>
+<div class="panel panel-default">
+  <div class="panel-heading">DNA Sequence</div>
+  <div class="panel-body">
+<span style ="font-family: Courier;">
+EOF__
+
+#Call DNA sequence and exon details
 
 my @cstart = sort { $a <=> $b } keys %exon;
 my @cfinish = sort { $a <=> $b } values %exon;
@@ -90,15 +160,38 @@ for (my $sequence=0; $sequence < length($string); $sequence++){
 			$ccount++;
 			}
 		print $base;
-		if (($sequence+1)%50 == 0){
+		if (($sequence+1)%100 == 0){
 			print "<br>";
 		}
 }
 
-
-#menu for choosing restriction enzyme sites
 print <<__EOF;
-
-#use bootstrap to create a menu for selecting 
-
-
+</span>
+</div>
+</div>
+</div>
+<div class="col-md-4" style="float:left;">
+Find Restriction Enzyme Site
+<form action='/cgi-bin/cgiwrap/jhurst03/restrictiontest.pl' method='post'>
+<div class="row">
+<div class="col-xs-4">
+<select class="form-control">
+  <option>EcoRI</option>
+  <option>BamHI</option>
+  <option>BsuMI</option>
+</select>
+</div>
+</div>
+<p><p>
+Or input your own sequence:
+<input type="text" name="form" size="10" maxsize="10"/></p>
+<p><input type="submit" value="Submit"/></p>
+</form>
+</div>
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="js/bootstrap.min.js"></script>
+  </body>
+</html>
+__EOF
