@@ -140,7 +140,7 @@ sub GetGeneData($$) {
 
 	#create and run a query to return the gene record	
 	my $sql = 
-	"SELECT accession, location, gene_id, product, dna_seq, coding_seq, aminoAcid_seq, seq_length, comp_flag 
+	"SELECT accession, location, gene_id, product, UPPER(dna_seq), UPPER(coding_seq), aminoAcid_seq, seq_length, comp_flag 
 	FROM dna_sequence 
 	WHERE accession = ?";
 
