@@ -66,7 +66,7 @@ print <<__EOF;
 
  <h1>Chromasome</h1>
     <h2>Results:</h2>
-    <form action='/cgi-bin/cgiwrap/jhurst03/detailtest.pl' method='post'>
+    <form action='/cgi-bin/cgiwrap/jhurst03/detail.pl' method='post'>
     <table class="table">
       <tr>
         <th>Gene Identifier</th>
@@ -89,6 +89,7 @@ print <<__EOF;
 __EOF
 }
 print <<__EOF
+		</post>
       </div>
     </div>
 

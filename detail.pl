@@ -3,9 +3,15 @@ use GenBankData;
 use CGI;
 use strict;
 my $cgi = new CGI;
-my $accno = $cgi->param(
+my $accno = $cgi->param('action');
 
-@GeneData = GetGeneData::GenBankData(
+my @detail = GetDetail::GenBankData($accno);
+my @gene = @{@detail[0]};
+my %exons = %{@detail[1]};
+my %codons = %{@detail[2]};
+my %enzymes = %{@detail[3]};
+
+
 
 print $cgi -> header();
 
@@ -62,8 +68,8 @@ __EOF
 
 
 
-my $aminosequence = "";
-my $codingsequence = "";
+my $aminosequence = $gene[6];
+my $codingsequence = $gene[5];
 
 my @codseq = unpack("(A100)*", $codingsequence);
 my @amiseq = unpack("(A100)*", $aminosequence);
@@ -105,6 +111,8 @@ EOF__
 
 #Call codon table variables
 
+
+
 my @codlet = ("U","C","A","G");
 my @codtab;
 
@@ -114,7 +122,11 @@ for (my $i=0; $i<4; $i=$i + 1){
 		 my $second = $codlet[$j];
 		for (my $k=0; $k<4; $k++){
 			my $third = $codlet[$k];
-           			push (@codtab, ); # 
+			my $codtrip = $first.$second.$third;
+			my @codarr = @{ $codons{$codtrip} };    #Dereference
+				foreach my $codelm (@codarr) {
+				push (@codtab, $codelm);
+			}
 		}
 	}
 }
@@ -145,6 +157,8 @@ EOF__
 
 #Call DNA sequence and exon details
 
+$string = $gene[4];
+
 my @cstart = sort { $a <=> $b } keys %exon;
 my @cfinish = sort { $a <=> $b } values %exon;
 my $ccount = 0;
@@ -164,6 +178,7 @@ for (my $sequence=0; $sequence < length($string); $sequence++){
 			print "<br>";
 		}
 }
+
 
 print <<__EOF;
 </span>
