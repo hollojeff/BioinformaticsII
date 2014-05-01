@@ -1,5 +1,9 @@
 Birkbeck Bioinformatics II group project
 
+http://student.cryst.bbk.ac.uk/~jhurst03/index.html
+
+GitHub: hollojeff / BioinformaticsII
+
 Bojan Cvijan
 bojancvijan@hotmail.com
 SQL database; parsing reference codon frequencies for genome; test scripts
@@ -16,7 +20,6 @@ Irina Zaharieva
 i.zaharieva@ucl.ac.uk
 parsing GenBank data; user documentation
 
-GitHub: hollojeff / BioinformaticsII
 
 GenBankProject
 |
@@ -24,24 +27,24 @@ GenBankProject
 |
 |__Commentary
 |	|
-|	|__CommentaryBC.pdf (Bojan)
+|	|__X (Bojan)
 |	|__CommentaryGD.pdf (Ginny)
-|	|__CommentaryJH.pdf (Jeff)
-|	|__CommentartIZ.pdf (Irina)
+|	|__X (Jeff)
+|	|__X (Irina)
 |
 |__WebLayer
 |	|
 |	|__Documentation (Jeff)
 |	|	|
-|	|	|__HtmlCgiScriptsDoc.pdf
+|	|	|__X
 |	|
 |	|__HtmlCgiScripts (Jeff)
 |	|	|
-|	|	|__
+|	|	|__X
 |	|
 |	|__UserDocumentation (Irina)
 |		|
-|		|__
+|		|__X
 |
 |
 |__MiddleLayer
@@ -49,7 +52,7 @@ GenBankProject
 |	|__Documentation
 |	|	|
 |	|	|__ModulesDoc.pdf (Ginny)
-|	|	|__TestScriptsDoc.pdf (Bojan)
+|	|	|__X (Bojan)
 |	|
 |	|__Modules (Ginny)
 |	|	|
@@ -61,24 +64,23 @@ GenBankProject
 |	|
 |	|__TestScripts (Bojan)
 |		|
-|		|__
+|		|__X
 |
 |__DatabaseLayer
 	|
 	|__Documentation
 	|	|
-	|	|__DatabaseScriptsDoc.pdf (Bojan)
-	|	|__DataScriptsDocIZ.pdf (Irina)
-	|	|__DataScriptsDocBC.pdf (Bojan)
+	|	|__X (Bojan)
+	|	|__X (Irina)
 	|	|__DataScriptsDocGD.pdf	(Ginny)
 	|
 	|__DatabaseScripts(Bojan)
 	|	|
-	|	|__
+	|	|__X
 	|
 	|__DataScripts
 		|
-		|__(Irina)
+		|__X (Irina)
 		|__Chrom_Freq_Parse.pl (Bojan)
 		|__UpdateReferenceData.pl (Ginny)
 
