@@ -5,16 +5,18 @@ use strict;
 my $cgi = new CGI;
 my $form = $cgi->param('form');
 my $search = $cgi->param('searchtype');
-my $return = $cgi->param('ReturnAll');
-
-if ($return == "Show All"){
-	$return = "T";
+my $test = $cgi->param('Submit');
+my $return ="F";
+#if ($test == "Submit"){
+#	$return = "T";
+#	}
+$form = "%".$form."%%";
+my @result;
+my @summary = GenBankData::GetSummaryData($search, $form, $return);
+foreach my $row(@summary){
+	push (@result, @{$row});
 	}
-	else {
-	$return ="F";
-}
 
-@result = GenBankData::GetSummaryData($form, $search, $return);
 
 print $cgi->header();
 print <<__EOF;
@@ -63,7 +65,10 @@ print <<__EOF;
     
   <div class="container">
       <div class="search-form">
-
+$test
+$return
+$search
+%form
  <h1>Chromasome</h1>
     <h2>Results:</h2>
     <form action='/cgi-bin/cgiwrap/jhurst03/detail.pl' method='post'>
@@ -80,16 +85,16 @@ __EOF
 for (my $i=0; $i < scalar @result; $i=$i+4) { 
 print <<__EOF;
      <tr>
-        <td> $result[$i] </td>
-        <td> $result[$i+1] </td>
         <td> $result[$i+2] </td>
-	<td> $result[$i+3] </td>
-	<td><button type="submit" name="action" value="$result[$i+2]">Details</button></td>
+        <td> $result[$i+3] </td>
+        <td> $result[$i] </td>
+	<td> $result[$i+1] </td>
+	<td><button type="submit" name="action" value="$result[$i]">Details</button></td>
       </tr>
 __EOF
 }
 print <<__EOF
-		</post>
+	</form>
       </div>
     </div>
 
@@ -100,4 +105,4 @@ print <<__EOF
   </body>
 </html>
 __EOF
-}
+
